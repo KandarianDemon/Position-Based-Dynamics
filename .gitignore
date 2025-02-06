@@ -1,0 +1,21 @@
+# Unity-generated files
+Library/
+Temp/
+Logs/
+Obj/
+Packages/
+UserSettings/
+.vs/
+
+# Ignore build outputs
+Build/
+Builds/
+ExportedObj/
+.gradle/
+*.apk
+*.aab
+*.unitypackage
+
+# Ignore system files
+.DS_Store
+Thumbs.db

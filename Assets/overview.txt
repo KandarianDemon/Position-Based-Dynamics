@@ -1,0 +1,16 @@
+Step-by-Step Guide to Implementing a Constraint-Based Soft-Body System for Meshes in Unity
+
+1. **Setup Unity Project**
+    - Open Unity and create a new 3D project.
+    - Import any necessary assets or create a simple mesh to work with.
+
+2. **Create Soft-Body Script**
+    - Create a new C# script named `SoftBody.cs` and attach it to your mesh object.
+
+3. **Define Soft-Body Structure**
+    - In `SoftBody.cs`, define the structure for the soft-body system, including vertices, constraints, and physics properties.
+    
+    
+    
+    
+    

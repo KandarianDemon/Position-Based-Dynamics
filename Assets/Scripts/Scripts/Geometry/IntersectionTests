@@ -1,0 +1,20 @@
+using UnityEngine;
+using System.Collections;
+using UnityEngine;
+
+namespace VirtualWorm.Geometry.IntersectionTests
+{
+
+    static (bool, int) PointTriangleIntersection(Vector3 q)
+    {
+
+        //we want to find intersection between point and triangle.
+        // barycentric coordinates?
+
+        return true,0;
+
+    }
+
+
+
+}
