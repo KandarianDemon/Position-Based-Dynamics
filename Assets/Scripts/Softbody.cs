@@ -123,8 +123,9 @@ namespace VirtualWorm
         Triangle[] _triangles;
 
         Map<int> map = new Utils.Map<int>();
-        
+
         [Header("External Forces")]
+    
 
         public List<Vector3> forces = new List<Vector3>();
         public float wind_strength = 0.1f;
@@ -137,72 +138,12 @@ namespace VirtualWorm
         
         [Range(0.1f, 10.0f)]
         public float normal_length = 0.5f;
-        
-        
-        void Start(){
-
-            mesh = GetComponent<MeshFilter>().mesh;
-            positions = mesh.vertices;
-            int[] triangles  = mesh.triangles;
-            RemoveDuplicateVertices(ref positions, ref triangles);
-            projectedPositions = positions;
-
-            velocities = new Vector3[positions.Length];
-            
-            edgeMap = GetEdgeMap(triangles);
-            triangleMap = GetTriangleMap(triangles);
-
-            Debug.Log($"Number of Triangles: {triangles.Length/3} mesh triangles {mesh.triangles.Length/3}");
-            weights = InitializeWeights(); 
-            _triangles = StoreTriangles(triangles);
-            float radius = (positions[triangles[0]] - positions[triangles[1]]).magnitude;
-            hash = new SpatialHashing(6000,radius);
-            Debug.Log($"radius: {radius} number of verts: {positions.Length}");
-            HashSet<Vector3> uniqueVertices = new HashSet<Vector3>(mesh.vertices);
-            Debug.Log($"Unique Vertices: {uniqueVertices.Count}, Total Vertices: {mesh.vertices.Length}");
 
 
-    
-            // foreach(var w in weights)
-            // {
-
-            //  Debug.Log($"Weight: {1.0f/w}");
-            // }
-
-
-
-            d_constraints = InitializeDistanceConstraints(mesh.triangles);
-            collisionConstraints = new List<Constraint>();
-
-            pinnedIndices = new bool[positions.Length];
- 
-            
-              for(int i = positions.Length-1; i>0; i--){
-                if(i>positions.Length-12){
-                    pinnedIndices[i] = true;
-
-                }
-
-                else if (i % 11 == 0 && pin_frame)
-                {
-                    pinnedIndices[i] = true;
-                }
-
-                else if (pin_frame && new int[] {0, 1,21, 32, 43, 54, 65, 76, 87, 98,109 }.Contains(i))
-                {
-                    pinnedIndices[i] = true;
-                }
-
-                else if(i < 11 && pin_frame)
-                {
-                    pinnedIndices[i] = true;
-                }
-                else{
-                    pinnedIndices[i] = false;
-                }
-
-                
-            }
+        void Start()
+        {
+            InitializeSoftbody();
+          
 
             //Debug.Log($"Number of pinned indices: {pinnedIndices.Length}");
 
@@ -219,10 +160,87 @@ namespace VirtualWorm
 
 
 
-            
+
 
         }
+        public void InitializeSoftbody()
+        {
+            mesh = GetComponent<MeshFilter>().mesh;
+            positions = mesh.vertices;
+            int[] triangles = mesh.triangles;
+            //RemoveDuplicateVertices(ref positions, ref triangles);
+            projectedPositions = positions;
 
+            velocities = new Vector3[positions.Length];
+
+            edgeMap = GetEdgeMap(triangles);
+            triangleMap = GetTriangleMap(triangles);
+
+            Debug.Log($"Number of Triangles: {triangles.Length / 3} mesh triangles {mesh.triangles.Length / 3}");
+            weights = InitializeWeights();
+            _triangles = StoreTriangles(triangles);
+            float radius = (positions[triangles[0]] - positions[triangles[1]]).magnitude;
+            hash = new SpatialHashing(6000, radius);
+            Debug.Log($"radius: {radius} number of verts: {positions.Length}");
+            HashSet<Vector3> uniqueVertices = new HashSet<Vector3>(mesh.vertices);
+            Debug.Log($"Unique Vertices: {uniqueVertices.Count}, Total Vertices: {mesh.vertices.Length}");
+
+
+
+            // foreach(var w in weights)
+            // {
+
+            //  Debug.Log($"Weight: {1.0f/w}");
+            // }
+
+
+
+            d_constraints = InitializeDistanceConstraints(mesh.triangles);
+            collisionConstraints = new List<Constraint>();
+
+            pinnedIndices = new bool[positions.Length];
+            pinnedIndices[0] = true;
+
+            // if (positions.Length >= 12)
+            // {
+
+
+            //     for (int i = positions.Length - 1; i > 0; i--)
+            //     {
+            //         if (i > positions.Length - 12)
+            //         {
+            //             pinnedIndices[i] = true;
+
+            //         }
+
+            //         else if (i % 11 == 0 && pin_frame)
+            //         {
+            //             pinnedIndices[i] = true;
+            //         }
+
+            //         else if (pin_frame && new int[] { 0, 1, 21, 32, 43, 54, 65, 76, 87, 98, 109 }.Contains(i))
+            //         {
+            //             pinnedIndices[i] = true;
+            //         }
+
+            //         else if (i < 11 && pin_frame)
+            //         {
+            //             pinnedIndices[i] = true;
+            //         }
+            //         else
+            //         {
+            //             pinnedIndices[i] = false;
+            //         }
+
+
+            //     }
+            // }
+
+            // else
+            // {
+            //     pinnedIndices[0] = true;
+            // }
+        }
         private void OnDrawGizmos() {
             if(positions == null)
             {
@@ -376,7 +394,7 @@ namespace VirtualWorm
                 collisionConstraints.Clear();
             }
 
-            //GenerateCollisionConstraints(positions,ref collisionConstraints);
+            //GenerateCollisionConstraints(positions,ref collisionConstraints); 
 
             //Debug.Log($"Number of Collision Constraints: {collisionConstraints.Count}");
 
@@ -436,6 +454,8 @@ namespace VirtualWorm
 
                 velocities[i] += weights[i]*this.transform.TransformPoint(new Vector3(0,-0.981f,0)) * timestep;
                 velocities[i] += localWind*wind_strength*timestep;
+
+                
                 //*(Mathf.PerlinNoise(pos.x,pos.z)+Time.deltaTime)*
                 DampVelocities(i,dampingMethod);  // I made this a function, so that i can later on add different methods of damping and it becomes easier to choose here which
                                     // one should be applied.

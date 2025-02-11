@@ -36,15 +36,17 @@
     <ImplicitlyExpandDesignTimeFacades>false</ImplicitlyExpandDesignTimeFacades>
   </PropertyGroup>
   <ItemGroup>
+     <Compile Include="Assets\Scripts\PBDSolver.cs" />
      <Compile Include="Assets\Scripts\SpatialHashing.cs" />
+     <Compile Include="Assets\Scripts\Scripts\MeshGenerator.cs" />
      <Compile Include="Assets\Scripts\WormGenerator.cs" />
+     <Compile Include="Assets\Scripts\Scripts\TestMesh.cs" />
+     <Compile Include="Assets\Scripts\Scripts\HookeanSpring.cs" />
      <Compile Include="Assets\Scripts\Scripts\Constraints\Constraint.cs" />
      <Compile Include="Assets\Scripts\Math\LinAlgSolver.cs" />
      <Compile Include="Assets\Scripts\Softbody.cs" />
      <Compile Include="Assets\Scripts\ExtensionMethods.cs" />
      <Compile Include="Assets\Scripts\Map.cs" />
-     <Compile Include="Assets\Scripts\PBDSolver.cs" />
-     <Compile Include="Assets\Scripts\Scripts\HookeanSpring.cs" />
      <None Include="Assets\Scripts\backface_culling_off.shader" />
      <None Include="Assets\Packages\MathNet.Numerics.5.0.0\lib\netstandard2.0\MathNet.Numerics.xml" />
      <None Include="Assets\overview.txt" />
