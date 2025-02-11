@@ -9,17 +9,32 @@ public class TestMesh : MonoBehaviour
 {
     MeshFilter filter;
     MeshRenderer renderer;
+
     Softbody softbody;
+    [Tooltip("Type of mesh to generate")]
     public MeshType meshType;
+
+    [Header("Debbuging Options")]
     public bool icosphere_equator = false;
-    public float angle_x = 0;
-    public float angle_y = 0;
-    public float angle_z = 0;
+    //public float angle_x = 0;
+    //public float angle_y = 0;
+    //public float angle_z = 0;
+    [Tooltip("Shows vertices and their indices")]
     public bool show_vertices = false;
+
+    [Tooltip("Shows the vertices of the equator of the sphere")]
     public bool show_equator = false;
+
+    [Tooltip("position of the x,y-plane in z direction, so that the equator vertices in that plane can be visualized")]
     public float tolerance = 0.01f;
     [Range(1,3)]
     public int subdivisions = 1;
+    [Header("Worm Creation Settings")]
+    [Tooltip("Length of the worm")]
+    public float worm_length = 25.0f;
+
+    [Header("Rotation Settings")]
+    Vector3 rotation_angle = new Vector3(0, 0, 0);
     // Start is called before the first frame update
     void Awake()
     {
@@ -30,7 +45,7 @@ public class TestMesh : MonoBehaviour
 
         InitializeMesh();
 
-        Debug.Log($"filter mesh has  {filter.mesh.triangles.Length / 3} triangles");
+        //Debug.Log($"filter mesh has  {filter.mesh.triangles.Length / 3} triangles");
 
     }
 
@@ -59,7 +74,7 @@ public class TestMesh : MonoBehaviour
                 break;
 
             case MeshType.Worm:
-                filter.mesh = MeshGenerator.GenerateWorm(subdivisions: this.subdivisions,length:25.0f);
+                filter.mesh = MeshGenerator.GenerateWorm(subdivisions: this.subdivisions,length:this.worm_length);
                 break;
         }
 
@@ -130,29 +145,29 @@ public class TestMesh : MonoBehaviour
         Matrix4x4 r_x = new Matrix4x4
         {
             m00 = 1,
-            m11 = Mathf.Cos(angle_x * Mathf.Deg2Rad),
-            m12 = -Mathf.Sin(angle_x * Mathf.Deg2Rad),
-            m21 = Mathf.Sin(angle_x * Mathf.Deg2Rad),
-            m22 = Mathf.Cos(angle_x * Mathf.Deg2Rad),
+            m11 = Mathf.Cos(rotation_angle.x * Mathf.Deg2Rad),
+            m12 = -Mathf.Sin(rotation_angle.x * Mathf.Deg2Rad),
+            m21 = Mathf.Sin(rotation_angle.x * Mathf.Deg2Rad),
+            m22 = Mathf.Cos(rotation_angle.x * Mathf.Deg2Rad),
             m33 = 1
         };
 
         Matrix4x4 r_y = new Matrix4x4
         {
-            m00 = Mathf.Cos(angle_y * Mathf.Deg2Rad),
-            m02 = Mathf.Sin(angle_y * Mathf.Deg2Rad),
+            m00 = Mathf.Cos(rotation_angle.y * Mathf.Deg2Rad),
+            m02 = Mathf.Sin(rotation_angle.y * Mathf.Deg2Rad),
             m11 = 1,
-            m20 = -Mathf.Sin(angle_y * Mathf.Deg2Rad),
-            m22 = Mathf.Cos(angle_y * Mathf.Deg2Rad),
+            m20 = -Mathf.Sin(rotation_angle.y * Mathf.Deg2Rad),
+            m22 = Mathf.Cos(rotation_angle.y * Mathf.Deg2Rad),
             m33 = 1
         };
 
         Matrix4x4 r_z = new Matrix4x4
         {
-            m00 = Mathf.Cos(angle_z * Mathf.Deg2Rad),
-            m01 = -Mathf.Sin(angle_z * Mathf.Deg2Rad),
-            m10 = Mathf.Sin(angle_z * Mathf.Deg2Rad),
-            m11 = Mathf.Cos(angle_z * Mathf.Deg2Rad),
+            m00 = Mathf.Cos(rotation_angle.z * Mathf.Deg2Rad),
+            m01 = -Mathf.Sin(rotation_angle.z * Mathf.Deg2Rad),
+            m10 = Mathf.Sin(rotation_angle.z * Mathf.Deg2Rad),
+            m11 = Mathf.Cos(rotation_angle.z * Mathf.Deg2Rad),
             m22 = 1,
             m33 = 1
         };
