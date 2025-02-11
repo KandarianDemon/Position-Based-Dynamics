@@ -176,14 +176,14 @@ namespace VirtualWorm
             edgeMap = GetEdgeMap(triangles);
             triangleMap = GetTriangleMap(triangles);
 
-            Debug.Log($"Number of Triangles: {triangles.Length / 3} mesh triangles {mesh.triangles.Length / 3}");
+            //Debug.Log($"Number of Triangles: {triangles.Length / 3} mesh triangles {mesh.triangles.Length / 3}");
             weights = InitializeWeights();
             _triangles = StoreTriangles(triangles);
             float radius = (positions[triangles[0]] - positions[triangles[1]]).magnitude;
             hash = new SpatialHashing(6000, radius);
-            Debug.Log($"radius: {radius} number of verts: {positions.Length}");
+            //Debug.Log($"radius: {radius} number of verts: {positions.Length}");
             HashSet<Vector3> uniqueVertices = new HashSet<Vector3>(mesh.vertices);
-            Debug.Log($"Unique Vertices: {uniqueVertices.Count}, Total Vertices: {mesh.vertices.Length}");
+            //Debug.Log($"Unique Vertices: {uniqueVertices.Count}, Total Vertices: {mesh.vertices.Length}");
 
 
 
