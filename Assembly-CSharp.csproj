@@ -39,9 +39,7 @@
      <Compile Include="Assets\Scripts\PBDSolver.cs" />
      <Compile Include="Assets\Scripts\SpatialHashing.cs" />
      <Compile Include="Assets\Scripts\Scripts\MeshGenerator.cs" />
-     <Compile Include="Assets\Scripts\WormGenerator.cs" />
      <Compile Include="Assets\Scripts\Scripts\TestMesh.cs" />
-     <Compile Include="Assets\Scripts\Scripts\HookeanSpring.cs" />
      <Compile Include="Assets\Scripts\Scripts\Constraints\Constraint.cs" />
      <Compile Include="Assets\Scripts\Math\LinAlgSolver.cs" />
      <Compile Include="Assets\Scripts\Softbody.cs" />
