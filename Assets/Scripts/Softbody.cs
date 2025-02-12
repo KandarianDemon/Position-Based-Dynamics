@@ -15,6 +15,7 @@ using Felix.Constraints;
 using VirtualWorm.Utils;
 using UnityEngine.Profiling;
 using UnityEngine.Analytics;
+using UnityEditor.EditorTools;
 
 
 
@@ -105,14 +106,18 @@ namespace VirtualWorm
         public float timestep = 0.001f;
 
         public int iterations = 5;
+
         
-        [Tooltip("material density of the cloth. 0 is soft, 1 is stiff.")]
         [Range(0.01f, 1.0f)]
+        [Tooltip("Determines the mass of the cloth")]
         public float cloth_density = 1.0f;
         [Range(0.0f, 1.0f)]
         public float cloth_stiffness = 0.5f;
+        [Tooltip("Determines the thickness of the cloth. Used for self collision detection")]
         public float cloth_thickness = 0.5f;
         float mass;
+
+        [Tooltip("Velocity damping method. Linear Damping is a simple damping method. Mueller Damping is a more sophisticated method, as described in the PBD paper.")]
         public DampingMethod dampingMethod;
 
         [Range(0.0f,1.0f)]
@@ -131,9 +136,13 @@ namespace VirtualWorm
         public float wind_strength = 0.1f;
         [Header("Debugging")]
 
+        [Tooltip("Displays the index of the vertex on the mesh in the editor view")]
         public bool display_vertex_numbers = false;
+        [Tooltip("Displays the normals of the triangles")]
         public bool display_normals = false;
+        [Tooltip("Pin the frame of the cloth. Dont use it for anything that is not a plane.")]
         public bool pin_frame;
+        [Tooltip("Displays the normals of the triangles and the velocity vectors of the vertices")]
         public bool triangle_normals;
         
         [Range(0.1f, 10.0f)]
