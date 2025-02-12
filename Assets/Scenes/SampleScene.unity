@@ -448,10 +448,13 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   meshType: 6
   icosphere_equator: 0
-  angle_x: 0
-  angle_y: 0
-  angle_z: 0
   show_vertices: 0
+  show_equator: 0
+  tolerance: 0.01
+  subdivisions: 1
+  worm_length: 25
+  bulgeFactor: 0.5
+  rotation_angle: {x: 0, y: 0, z: 0}
 --- !u!23 &542267058
 MeshRenderer:
   m_ObjectHideFlags: 0

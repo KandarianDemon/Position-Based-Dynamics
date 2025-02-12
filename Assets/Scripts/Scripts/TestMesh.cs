@@ -27,14 +27,19 @@ public class TestMesh : MonoBehaviour
 
     [Tooltip("position of the x,y-plane in z direction, so that the equator vertices in that plane can be visualized")]
     public float tolerance = 0.01f;
-    [Range(1,3)]
+    [Range(1, 3)]
+    [Tooltip("Number of subdivisions for the icosphere")]
     public int subdivisions = 1;
     [Header("Worm Creation Settings")]
     [Tooltip("Length of the worm")]
     public float worm_length = 25.0f;
+    [Range(0.01f, 2.0f)]
+    [Tooltip("Bulge factor for the worm")]
+    public float bulgeFactor = 0.5f;
+    
 
     [Header("Rotation Settings")]
-    Vector3 rotation_angle = new Vector3(0, 0, 0);
+    public Vector3 rotation_angle = new Vector3(0, 0, 0);
     // Start is called before the first frame update
     void Awake()
     {
@@ -74,7 +79,7 @@ public class TestMesh : MonoBehaviour
                 break;
 
             case MeshType.Worm:
-                filter.mesh = MeshGenerator.GenerateWorm(subdivisions: this.subdivisions,length:this.worm_length);
+                filter.mesh = MeshGenerator.GenerateWorm(subdivisions: this.subdivisions,length:this.worm_length, bulgeFactor:this.bulgeFactor);
                 break;
         }
 

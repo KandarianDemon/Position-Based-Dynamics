@@ -416,7 +416,7 @@ namespace Felix.MeshGeneration
         }
 
 
-        public static Mesh GenerateWorm(float radius = 1f, float length = 10f, int subdivisions = 1, int cylinderSegments = 28)
+        public static Mesh GenerateWorm(float radius = 1f, float length = 10f, int subdivisions = 1, int cylinderSegments = 28, float bulgeFactor = 0.5f)
         {
             Mesh wormMesh = new Mesh();
             List<Vector3> vertices = new List<Vector3>();
@@ -526,7 +526,7 @@ namespace Felix.MeshGeneration
                 float z = (float)ring / (cylinderSegments) * length;
 
                 // Calculate the bulging effect (using sine wave function)
-                float bulgeFactor = 0.5f; // Adjust this to control the amount of bulge
+                //float bulgeFactor = 0.5f; // Adjust this to control the amount of bulge
                 float scale = 1 + bulgeFactor * Mathf.Sin(Mathf.PI * (ring / (float)(ringsCount - 1)));
 
                 for (int i = 0; i < vertsPerRing; i++)
