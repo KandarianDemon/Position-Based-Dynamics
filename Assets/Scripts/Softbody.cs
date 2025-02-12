@@ -106,6 +106,8 @@ namespace VirtualWorm
         public float timestep = 0.001f;
 
         public int iterations = 5;
+        public bool gravity = false;
+        public bool pressure_force = false;
 
         
         [Range(0.01f, 1.0f)]
@@ -174,7 +176,7 @@ namespace VirtualWorm
         }
         public void InitializeSoftbody()
         {
-            mesh = GetComponent<MeshFilter>().mesh;
+            this.mesh = GetComponent<MeshFilter>().mesh;
             positions = mesh.vertices;
             int[] triangles = mesh.triangles;
             //RemoveDuplicateVertices(ref positions, ref triangles);
@@ -461,8 +463,10 @@ namespace VirtualWorm
                 }
                 Vector3 localWind = this.transform.InverseTransformPoint(netForce);
 
-                velocities[i] += weights[i]*this.transform.TransformPoint(new Vector3(0,-0.981f,0)) * timestep;
+                if(gravity) velocities[i] += weights[i]*this.transform.TransformPoint(new Vector3(0,-0.981f,0)) * timestep;
                 velocities[i] += localWind*wind_strength*timestep;
+                if(pressure_force)velocities[i] += weights[i]*mesh.normals[i] * 2000.0f*timestep;
+                
 
                 
                 //*(Mathf.PerlinNoise(pos.x,pos.z)+Time.deltaTime)*
