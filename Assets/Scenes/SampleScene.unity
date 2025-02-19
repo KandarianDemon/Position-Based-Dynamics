@@ -266,10 +266,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ab7506c99cf23f449b20cc0e85b78285, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  pointA: {fileID: 64241960}
-  pointB: {fileID: 490237370}
-  springConstant: 1
-  restLength: 1
 --- !u!4 &479973833
 Transform:
   m_ObjectHideFlags: 0
@@ -451,9 +447,9 @@ MonoBehaviour:
   show_vertices: 0
   show_equator: 0
   tolerance: 0.01
-  subdivisions: 1
-  worm_length: 25
-  bulgeFactor: 0.5
+  subdivisions: 3
+  worm_length: 24.33
+  bulgeFactor: 0.588
   rotation_angle: {x: 0, y: 0, z: 0}
 --- !u!23 &542267058
 MeshRenderer:
@@ -518,15 +514,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   pinnedIndices: 
-  timestep: 0.001
+  timestep: 0.0001
   iterations: 120
+  gravity: 1
+  pressure_force: 1
   cloth_density: 0.735
-  cloth_stiffness: 0.827
+  cloth_stiffness: 0.57
   cloth_thickness: 0.5
   dampingMethod: 1
   velocity_damping: 0.02
-  forces:
-  - {x: 0, y: -9, z: 0}
+  forces: []
   wind_strength: 1000
   display_vertex_numbers: 0
   display_normals: 0
@@ -730,7 +727,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1178965695
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -746,6 +743,8 @@ MonoBehaviour:
   pinnedIndices: 
   timestep: 0.01
   iterations: 120
+  gravity: 1
+  pressure_force: 0
   cloth_density: 0.237
   cloth_stiffness: 0.82
   cloth_thickness: 0.01

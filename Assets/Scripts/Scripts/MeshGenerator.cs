@@ -2,6 +2,10 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
 using MathNet.Numerics.LinearAlgebra;
+using TMPro;
+using UnityEngine.UIElements;
+using System.Linq;
+using Unity.VisualScripting.Dependencies.Sqlite;
 
 namespace Felix.MeshGeneration
 {
@@ -240,24 +244,48 @@ namespace Felix.MeshGeneration
 
             };
 
-            float angle = -Vector3.Angle(Vector3.up, vertices[0])*Mathf.Deg2Rad;
-           Matrix4x4 r_z = new Matrix4x4
-           {
-            
-          
-            m00 = Mathf.Cos(angle), m01= -Mathf.Sin(angle), m02 = 0, m03 = 0,
-            m10 =Mathf.Sin(angle),  m11 = Mathf.Cos(angle), m12=0, m13=0,
-            m20=0, m21=0, m22 =1, m23=0,
-            m30=0, m31=0,  m32= 0, m33=1
-         };
-         
-         Matrix4x4 r_x = new Matrix4x4
-        {
-            m00 = 1, m01 = 0,             m02 = 0,              m03 = 0,
-            m10 = 0, m11 = Mathf.Cos(angle), m12 = -Mathf.Sin(angle), m13 = 0,
-            m20 = 0, m21 = Mathf.Sin(angle), m22 = Mathf.Cos(angle),  m23 = 0,
-            m30 = 0, m31 = 0,             m32 = 0,              m33 = 1
-        };
+            float angle = -Vector3.Angle(Vector3.up, vertices[0]) * Mathf.Deg2Rad;
+            Matrix4x4 r_z = new Matrix4x4
+            {
+
+
+                m00 = Mathf.Cos(angle),
+                m01 = -Mathf.Sin(angle),
+                m02 = 0,
+                m03 = 0,
+                m10 = Mathf.Sin(angle),
+                m11 = Mathf.Cos(angle),
+                m12 = 0,
+                m13 = 0,
+                m20 = 0,
+                m21 = 0,
+                m22 = 1,
+                m23 = 0,
+                m30 = 0,
+                m31 = 0,
+                m32 = 0,
+                m33 = 1
+            };
+
+            Matrix4x4 r_x = new Matrix4x4
+            {
+                m00 = 1,
+                m01 = 0,
+                m02 = 0,
+                m03 = 0,
+                m10 = 0,
+                m11 = Mathf.Cos(angle),
+                m12 = -Mathf.Sin(angle),
+                m13 = 0,
+                m20 = 0,
+                m21 = Mathf.Sin(angle),
+                m22 = Mathf.Cos(angle),
+                m23 = 0,
+                m30 = 0,
+                m31 = 0,
+                m32 = 0,
+                m33 = 1
+            };
 
 
 
@@ -293,14 +321,14 @@ namespace Felix.MeshGeneration
         public static Mesh GenerateIcoSphere(int subdivisions = 1)
         {
 
-            
+
             Mesh mesh = new Mesh { name = "Icosphere" };
 
             // Golden ratio
             float t = (1f + Mathf.Sqrt(5f)) / 2f;
 
             // Create 12 vertices of a icosahedron
-                    List<Vector3> vertices = new List<Vector3>
+            List<Vector3> vertices = new List<Vector3>
             {
                 new Vector3(-1,  t,  0).normalized,
                 new Vector3( 1,  t,  0).normalized,
@@ -315,19 +343,31 @@ namespace Felix.MeshGeneration
                 new Vector3(-t,  0, -1).normalized,
                 new Vector3(-t,  0,  1).normalized
             };
-             float angle = Vector3.Angle(Vector3.up, vertices[0])*Mathf.Deg2Rad;
+            float angle = Vector3.Angle(Vector3.up, vertices[0]) * Mathf.Deg2Rad;
 
 
-             Matrix4x4 r_z = new Matrix4x4
-           {
-            
-          
-            m00 = Mathf.Cos(angle), m01= -Mathf.Sin(angle), m02 = 0, m03 = 0,
-            m10 =Mathf.Sin(angle),  m11 = Mathf.Cos(angle), m12=0, m13=0,
-            m20=0, m21=0, m22 =1, m23=0,
-            m30=0, m31=0,  m32= 0, m33=1
-         };
-    
+            Matrix4x4 r_z = new Matrix4x4
+            {
+
+
+                m00 = Mathf.Cos(angle),
+                m01 = -Mathf.Sin(angle),
+                m02 = 0,
+                m03 = 0,
+                m10 = Mathf.Sin(angle),
+                m11 = Mathf.Cos(angle),
+                m12 = 0,
+                m13 = 0,
+                m20 = 0,
+                m21 = 0,
+                m22 = 1,
+                m23 = 0,
+                m30 = 0,
+                m31 = 0,
+                m32 = 0,
+                m33 = 1
+            };
+
             //List<Vector3> vertices = GenerateIcosahedron().vertices.ToList();
 
             //rotate vertices around z 45 degrees
@@ -424,6 +464,7 @@ namespace Felix.MeshGeneration
 
             // First generate a complete icosphere to get the ring of vertices at the cut
             var baseSphere = GenerateIcoSphere(subdivisions);
+
             List<Vector3> sphereVerts = new List<Vector3>(baseSphere.vertices);
             List<int> sphereTriangles = new List<int>(baseSphere.triangles);
 
@@ -463,11 +504,11 @@ namespace Felix.MeshGeneration
                 if (sphereVerts[i].y <= tolerance)
                 {
                     frontVertexMap[i] = frontVerts.Count;
-                    frontVerts.Add(sphereVerts[i] * radius);
+                    frontVerts.Add(new Vector3(sphereVerts[i].x * radius, sphereVerts[i].y * 2.0f * radius, sphereVerts[i].z * radius));
                 }
             }
 
-            
+
             // Add triangles that use these vertices
             for (int i = 0; i < sphereTriangles.Count; i += 3)
             {
@@ -485,17 +526,17 @@ namespace Felix.MeshGeneration
                 }
             }
 
-          
-           
+
+
 
             // Generate back hemisphere
             List<Vector3> backVerts = new List<Vector3>();
             List<int> backTris = new List<int>(frontTris);
-            
+
 
             for (int i = 0; i < frontVerts.Count; i++)
             {
-                backVerts.Add(new Vector3(frontVerts[i].x, frontVerts[i].y - length, frontVerts[i].z) * -1.0f);
+                backVerts.Add(new Vector3(frontVerts[i].x, (frontVerts[i].y) - length, frontVerts[i].z) * -1.0f);
             }
 
             for (int i = 0; i < backTris.Count; i += 3)
@@ -508,11 +549,13 @@ namespace Felix.MeshGeneration
                 backTris[i + 1] = c;
                 backTris[i + 2] = b;
             }
-            
-              // Generate cylinder with matching resolution
+
+            // Generate cylinder with matching resolution
             List<Vector3> cylinderVerts = new List<Vector3>();
             List<int> cylinderTris = new List<int>();
             // cylindersegments: get distance between equator vertices, divide through length
+
+            Dictionary<int, int> cylinderVertexMap = new Dictionary<int, int>();
 
             float dst = (baseSphere.vertices[equatorIndices[1]] - baseSphere.vertices[equatorIndices[0]]).magnitude;
             cylinderSegments = Mathf.FloorToInt(length / dst);
@@ -535,7 +578,9 @@ namespace Felix.MeshGeneration
                     if (ring == 0)
                     {
                         Vector3 sphereVert = sphereVerts[equatorIndices[i]] * radius;
-                        //cylinderVerts.Add(frontVerts[i] * radius);
+                        cylinderVerts.Add(sphereVert * radius);
+
+                        //cylinderVertexMap[cylinderVerts.Count - 1] = equatorIndices[i];
                     }
                     else if (ring == ringsCount - 1)
                     {
@@ -543,22 +588,32 @@ namespace Felix.MeshGeneration
                         // Apply the scaling to make the last ring fit with the bulged center
                         cylinderVerts.Add(new Vector3(sphereVert.x * scale, z, sphereVert.z * scale));
                         //cylinderVerts.Add(backVerts[i] * radius);
+                        //cylinderVertexMap[cylinderVerts.Count - 1] = equatorIndices[i];
                     }
                     else
                     {
                         // Interpolate between rings and apply the bulge scaling
                         Vector3 baseVert = sphereVerts[equatorIndices[i]] * radius;
                         cylinderVerts.Add(new Vector3(baseVert.x * scale, z, baseVert.z * scale));
+
                     }
                 }
             }
 
-            
-             // Generate cylinder triangles
+            Debug.Log($"cylinderVerts Mappings: {cylinderVertexMap.Count} verts per ring: {vertsPerRing} cylinderSegments: {cylinderSegments}");
+            foreach (var key in cylinderVertexMap.Keys)
+            {
+                Debug.Log($"key: {key} value: {cylinderVertexMap[key]}");
+            }
+
+
+            // Generate cylinder triangles
             for (int ring = 0; ring < cylinderSegments; ring++)
             {
                 int ringStartIdx = ring * vertsPerRing;
                 int nextRingStartIdx = (ring + 1) * vertsPerRing;
+
+
 
                 for (int i = 0; i < vertsPerRing; i++)
                 {
@@ -576,60 +631,281 @@ namespace Felix.MeshGeneration
                 }
             }
 
+            // frontVertexMap = MapMeshEndings(equatorIndices.ToArray(), sphereVerts, cylinderTris, ref cylinderVerts, vertsPerRing);
+            // ReplaceIndices(ref frontTris, frontVertexMap);
+
+            // frontVertexMap = MapMeshEndings(equatorIndices.ToArray(), sphereVerts, cylinderTris, ref cylinderVerts, vertsPerRing);
+            // ReplaceIndices(ref backTris, frontVertexMap);
+
             // Get first and last ring. connect them with the cylinder quads
 
-            
-           
 
-            
 
-            
-        
-           
-            
-            
+
+
+
+
+
+
+
             // Combine all meshes
             int frontOffset = 0;
-            for(int i = 0; i< frontVerts.Count;i++)
+            for (int i = 0; i < frontVerts.Count; i++)
             {
                 vertices.Add(frontVerts[i]);
             }
 
+
+
             int cylinderOffset = vertices.Count;
-            
-            for(int i = 0; i<cylinderVerts.Count-1;i++)
+
+            for (int i = 0; i < cylinderVerts.Count - 1; i++)
             {
+                // the first vertices of the cylinder are actually already in the array, so we need to update their indices to create the triangles.
+
+                if (i < vertsPerRing)
+                {
+                    continue;
+                }
+
+                if (i >= cylinderVerts.Count - vertsPerRing)
+                {
+                    continue;
+                }
+
                 vertices.Add(cylinderVerts[i]);
             }
 
             int backOffset = vertices.Count;
-            
+
             for (int i = 0; i < backVerts.Count; i++)
             {
+
                 vertices.Add(backVerts[i]);
             }
+
+
+
 
             // Add all triangles with correct offsets
             //triangles.AddRange(frontTris);
 
-            for(int i = 0; i< frontTris.Count;i++)
+            // triangle creation a bit tricky
+
+            //DebugMesh(frontTris, frontVerts, Color.red);
+            //DebugMesh(cylinderTris, cylinderVerts, Color.green);
+            //DebugMesh(backTris, backVerts, Color.blue);
+
+
+
+
+
+            for (int i = 0; i < frontTris.Count; i++)
             {
                 triangles.Add(frontTris[i] + frontOffset);
             }
 
-            for (int i = 0; i < cylinderTris.Count; i++)
-                {
-                    triangles.Add(cylinderTris[i] + cylinderOffset);
-                }
+
+
+            //Debug.Log($"Cylinder limit {cylinderTris.Count / 2 + 105 * vertsPerRing} cylinder tri count {cylinderTris.Count} verts per ring {vertsPerRing} sphereverts {sphereVerts.Count} || {frontTris.Count} cylinderoffset: {cylinderOffset}");
+            for (int i = 0; i < (cylinderTris.Count - vertsPerRing * 12); i++)
+            {
+                // need to stich the cylinder to the front equator verts
+
+                // look up vert in cylinder verts, if it is in front verts, get index of the front verts and use that index.
+
+                // check if vert is in front verts, if so get index of front verts
+
+
+
+                // if index is in double verts, use the smaller index.
+
+
+
+                int index = cylinderTris[i] + cylinderOffset; // index for vertex look up
+
+                // stitch first ring
+                // check for each vert if its in the front verts
+
+
+                // stitch last ring
+
+
+
+
+
+
+
+
+                triangles.Add(index);
+
+                //triangles.Add(cylinderTris[i] + cylinderOffset);
+                // the last index needs to be the first index
+                // need to stitch the cylinder to the back equator verts
+            }
+
+
 
             for (int i = 0; i < backTris.Count; i++)
             {
-                triangles.Add(backTris[i] + backOffset);
+
+                // if index is in double verts, use the smaller index.
+                int index = backTris[i] + backOffset;
+
+                //   foreach (var e in doubleVerts)
+                // {
+                //     if (index == e.Item2)
+                //     {
+                //         index = e.Item1;
+                //     }
+                // }
+
+
+
+
+
+                triangles.Add(index);
             }
 
-            List<Vector3> unique = vertices.Distinct().ToList();
+            // use equator indices to get the corresponding indices from front and back verts
+            Dictionary<int, int> map = new Dictionary<int, int>();
 
-            Debug.Log($"Vertices: {vertices.Count} Unique: {unique.Count}");
+            for (int i = 0; i < equatorIndices.Count; i++)
+            {
+                Vector3 og = sphereVerts[equatorIndices[i]];
+                for (int j = 0; j < frontVerts.Count; j++)
+                {
+                    if (frontVerts[j] == og)
+                    {
+                        map.Add(i, j);
+                    }
+                }
+            }
+
+            for (int i = frontVerts.Count; i < frontVerts.Count + vertsPerRing; i++)
+            {
+
+                //int eq = equatorIndices[i - frontVerts.Count];
+                Debug.DrawLine(vertices[i], vertices[i] + Vector3.up * 0.1f, Color.red, 1000f);
+
+                if (map.ContainsKey(i - frontVerts.Count))
+                {
+
+                    Vector3 p = vertices[map[i - frontVerts.Count]];
+                    Debug.DrawLine(p, p + Vector3.up * 0.1f, Color.blue, 1000f);
+
+
+                }
+
+
+
+
+            }
+
+            for (int i = cylinderOffset + cylinderVerts.Count - 2*vertsPerRing; i < vertices.Count -backOffset; i++)
+            {
+                 Debug.DrawLine(vertices[i], vertices[i] + Vector3.up * 0.1f, Color.yellow, 1000f);
+            }
+            
+             
+
+
+
+            for (int i = 0; i < vertsPerRing; i++)
+                {
+                    int j = (i == vertsPerRing - 1) ? 0 : i;
+
+                    // Vector3 a1 = vertices[map[j]];
+                    // Vector3 b1 = vertices[map[j + 1]];
+                    // Vector3 c1 = vertices[frontVerts.Count + j];
+                    // Vector3 d1 = vertices[frontVerts.Count + j + 1];
+
+                    // Debug.DrawLine(a1, b1, Color.green, 1000f);
+                    // Debug.DrawLine(b1, c1, Color.green, 1000f);
+                    // Debug.DrawLine(c1, a1, Color.green, 1000f);
+
+                    // Debug.DrawLine(c1, b1, Color.green, 1000f);
+                    // Debug.DrawLine(b1, d1, Color.green, 1000f);
+                    // Debug.DrawLine(d1, c1, Color.green, 1000f);
+
+                    triangles.Add(map[j]);
+
+                    triangles.Add(frontVerts.Count + j);
+                    triangles.Add(map[j + 1]);
+
+                    triangles.Add(frontVerts.Count + j);
+                    triangles.Add(frontVerts.Count + j + 1);
+                    triangles.Add(map[j + 1]);
+                }
+
+            map.Clear();
+            
+            for (int i = 0; i < equatorIndices.Count; i++)
+            {
+                Vector3 og = sphereVerts[equatorIndices[i]];
+                for (int j = 0; j < backVerts.Count; j++)
+                {
+                    if (backVerts[j] == og)
+                    {
+                        map.Add(i, j);
+                    }
+                }
+            }
+            
+            //   for (int i = 0; i < vertsPerRing; i++)
+            // {
+            //     int j = (i == vertsPerRing - 1) ? 0 : i;
+
+            //     // Vector3 a1 = vertices[map[j]];
+            //     // Vector3 b1 = vertices[map[j + 1]];
+            //     // Vector3 c1 = vertices[frontVerts.Count + j];
+            //     // Vector3 d1 = vertices[frontVerts.Count + j + 1];
+
+            //     // Debug.DrawLine(a1, b1, Color.green, 1000f);
+            //     // Debug.DrawLine(b1, c1, Color.green, 1000f);
+            //     // Debug.DrawLine(c1, a1, Color.green, 1000f);
+
+            //     // Debug.DrawLine(c1, b1, Color.green, 1000f);
+            //     // Debug.DrawLine(b1, d1, Color.green, 1000f);
+            //     // Debug.DrawLine(d1, c1, Color.green, 1000f);
+
+            //     triangles.Add(map[j + cylinderOffset]);
+
+            //     triangles.Add( j + cylinderOffset);
+            //     triangles.Add(map[j + 1 + cylinderOffset]);
+
+            //     triangles.Add(frontVerts.Count + j + cylinderOffset);
+            //     triangles.Add(frontVerts.Count + j + 1 + cylinderOffset);
+            //     triangles.Add(map[j + 1 + cylinderOffset]);
+            // }
+            
+           
+          
+
+
+
+
+
+           
+
+
+          
+            //DebugMesh(triangles, vertices, Color.red);
+
+            Vector3 height = new Vector3(0, length/2,0);
+
+            
+            // for (int i = 0; i < vertices.Count; i ++)
+            // {
+            //     Vector3 dir = vertices[i] - height;
+            //     dir.Normalize();
+            //     Debug.DrawLine(vertices[i],vertices[i] + dir * 0.07f ,Color.green,1000f);
+
+                
+
+
+            // }
+
             // Create final mesh
             wormMesh.vertices = vertices.ToArray();
             wormMesh.triangles = triangles.ToArray();
@@ -637,6 +913,26 @@ namespace Felix.MeshGeneration
             wormMesh.RecalculateBounds();
 
             return wormMesh;
+        }
+
+        public static List<(int, int)> GetDoulbeVertices(List<Vector3> verts)
+        {
+
+            List<(int, int)> doubleVerts = new List<(int, int)>();
+
+            for (int i = 0; i < verts.Count; i++)
+            {
+                for (int j = i + 1; j < verts.Count; j++)
+                {
+                    if (verts[i] == verts[j])
+                    {
+                        doubleVerts.Add((i, j));
+                    }
+                }
+            }
+
+            return doubleVerts;
+
         }
 
         public static Mesh GenerateWormMesh()
@@ -654,5 +950,118 @@ namespace Felix.MeshGeneration
             // 5. ) Generate back hemisphere
             return mesh;
         }
+
+        public static Dictionary<int, int> MapMeshEndings(int[] eq_idx, List<Vector3> hemisphere, List<int> cylinderTris, ref List<Vector3> cylinderVerts, int vertsPerRing)
+        {
+
+            Dictionary<int, int> vertexMap = new Dictionary<int, int>();
+
+            for (int i = 0; i < vertsPerRing; i++)
+            {
+                int idx = eq_idx[i];
+                Debug.Log($"idx: {idx} vertsPerRing: {vertsPerRing} eq_idx: {eq_idx.Length} i: {i} hemisphere: {hemisphere.Count}");
+                Vector3 vert = hemisphere[idx];
+
+                if (cylinderVerts.Contains(vert))
+                {
+                    int cylinderIdx = cylinderVerts.IndexOf(vert);
+                    vertexMap[cylinderIdx] = idx;
+                    //cylinderVerts.RemoveAt(cylinderIdx);
+                }
+            }
+
+
+
+            return vertexMap;
+        }
+
+        public static void ReplaceIndices(ref List<int> tris, Dictionary<int, int> vertexMap)
+        {
+            for (int i = 0; i < tris.Count; i++)
+            {
+                if (vertexMap.ContainsKey(tris[i]))
+                {
+                    tris[i] = vertexMap[tris[i]];
+                }
+            }
+        }
+
+        public static void DebugMesh(List<int> tris, List<Vector3> verts, Color col, int offset = 0)
+        {
+
+            for (int i = 0; i < tris.Count; i += 3)
+            {
+                int a = tris[i] + offset;
+                int b = tris[i + 1] + offset;
+                int c = tris[i + 2] + offset;
+
+                Vector3 A = verts[a];
+                Vector3 B = verts[b];
+                Vector3 C = verts[c];
+
+
+                Debug.DrawLine(A, B, col, 1000f);
+                Debug.DrawLine(B, C, col, 1000f);
+                Debug.DrawLine(C, A, col, 1000f);
+            }
+            
+        }
+        
+        
+        // public struct HemisphereData
+        // {
+        //     public List<Vector3> vertices;
+        //     public List<int> triangles;
+        //     public Dictionary<int, int> vertexMap;
+
+        //     public HemisphereData(List<Vector3> vertices, List<int> triangles, Dictionary<int, int> vertexMap)
+        //     {
+        //         this.vertices = vertices;
+        //         this.triangles = triangles;
+        //         this.vertexMap = vertexMap;
+        //     }
+
+        // }
+
+        // public static HemisphereData GenerateHemisphere(List<Vector3> sphereVerts, List<int> sphereTriangles, float tolerance, float radius)
+
+        // {
+        //     HemisphereData hemisphereData = new HemisphereData();
+
+        //     // Add all vertices that have z >= 0
+        //     for (int i = 0; i < sphereVerts.Count; i++)
+        //     {
+        //         if (sphereVerts[i].y <= tolerance)
+        //         {
+        //             hemisphereData.vertexMap[i] = hemisphereData.vertices.Count;
+        //             hemisphereData.vertices.Add(sphereVerts[i] * radius);
+        //         }
+        //     }
+
+
+        //     // Add triangles that use these vertices
+        //     for (int i = 0; i < sphereTriangles.Count; i += 3)
+        //     {
+        //         int v1 = sphereTriangles[i];
+        //         int v2 = sphereTriangles[i + 1];
+        //         int v3 = sphereTriangles[i + 2];
+
+        //         if (hemisphereData.vertexMap.ContainsKey(v1) &&
+        //            hemisphereData.vertexMap.ContainsKey(v2) &&
+        //             hemisphereData.vertexMap.ContainsKey(v3))
+        //         {
+        //             hemisphereData.triangles.Add(hemisphereData.vertexMap[v1]);
+        //             hemisphereData.triangles.Add(hemisphereData.vertexMap[v2]);
+        //             hemisphereData.triangles.Add(hemisphereData.vertexMap[v3]);
+        //         }
+        //     }
+
+        //     return hemisphereData;
+
+
+        // }
+
+
+
     }
 }

@@ -20,8 +20,19 @@ using UnityEditor.EditorTools;
 
 
 
+
 namespace VirtualWorm
 {
+    public enum ConstraintType
+    {
+        DistanceConstraint,
+        BendingConstraint,
+        SelfCollisionConstraint, VolumeConstraint
+    }
+
+    // store how many positions are affected by the constraints
+
+
 
     public enum DampingMethod
     {
@@ -132,6 +143,7 @@ namespace VirtualWorm
         Map<int> map = new Utils.Map<int>();
 
         [Header("External Forces")]
+        Vector3 gravity_vec = new Vector3(0.0f,-9.81f,0.0f);
     
 
         public List<Vector3> forces = new List<Vector3>();
@@ -191,7 +203,7 @@ namespace VirtualWorm
             weights = InitializeWeights();
             _triangles = StoreTriangles(triangles);
             float radius = (positions[triangles[0]] - positions[triangles[1]]).magnitude;
-            hash = new SpatialHashing(6000, radius);
+            hash = new SpatialHashing(20000, cloth_thickness);
             //Debug.Log($"radius: {radius} number of verts: {positions.Length}");
             HashSet<Vector3> uniqueVertices = new HashSet<Vector3>(mesh.vertices);
             //Debug.Log($"Unique Vertices: {uniqueVertices.Count}, Total Vertices: {mesh.vertices.Length}");
@@ -207,10 +219,11 @@ namespace VirtualWorm
 
 
             d_constraints = InitializeDistanceConstraints(mesh.triangles);
+            
             collisionConstraints = new List<Constraint>();
 
             pinnedIndices = new bool[positions.Length];
-            pinnedIndices[0] = true;
+            pinnedIndices[positions.Length-1] = true;
 
             // if (positions.Length >= 12)
             // {
@@ -406,20 +419,22 @@ namespace VirtualWorm
             }
 
             //GenerateCollisionConstraints(positions,ref collisionConstraints); 
+            //Debug.Log($"Number of Collision Constraints: {collisionConstraints.Count}");
 
             //Debug.Log($"Number of Collision Constraints: {collisionConstraints.Count}");
 
 
-            
-            IntegrateVelocities(positions);
-            
 
-           
+            //IntegrateVelocities(positions);
+            // This function kills the performance.
 
-           
+
+
+
+
             // now i need to loop over all the vertices. Doesnt seem to be efficient really...
 
-            
+
 
             ProjectPositions(positions);
             //ProjectCollisionConstraints(); //just for the test. later wrap both functions in an iterated for loop. Think about substepping.
@@ -464,8 +479,10 @@ namespace VirtualWorm
                 Vector3 localWind = this.transform.InverseTransformPoint(netForce);
 
                 if(gravity) velocities[i] += weights[i]*this.transform.TransformPoint(new Vector3(0,-0.981f,0)) * timestep;
-                velocities[i] += localWind*wind_strength*timestep;
-                if(pressure_force)velocities[i] += weights[i]*mesh.normals[i] * 2000.0f*timestep;
+
+                //velocities[i] += localWind*wind_strength*timestep;
+                
+                if (pressure_force) velocities[i] += weights[i] * mesh.normals[i] * 2000.0f * timestep;
                 
 
                 
@@ -478,10 +495,16 @@ namespace VirtualWorm
 
         void UpdateVelocities(ref Vector3[] velocities){
 
-            for(int i = 0; i<velocities.Length; i++)
-            {
 
-                velocities[i] = (projectedPositions[i] - positions[i])/timestep;
+            for (int i = 0; i < velocities.Length; i++)
+            {
+                if(pinnedIndices[i]){
+                    velocities[i] = Vector3.zero;
+                    continue;
+                }
+                velocities[i] = (projectedPositions[i] - positions[i]) / timestep;
+                if (gravity) velocities[i] += weights[i] * gravity_vec * 10.0f * timestep;
+                
             }
         }
 
@@ -534,6 +557,7 @@ namespace VirtualWorm
                     continue;
                 }
                 
+                velocities[i] += timestep * gravity_vec*100.0f*weights[i];
                 projectedPositions[i] = positions[i] + velocities[i]  * timestep;
             }
         }
@@ -713,46 +737,49 @@ namespace VirtualWorm
         {
             if (hash == null) return;
 
-           
+            int totalChecks = 0;
+            int constraintsGenerated = 0;
 
             hash.Create(pos); //First create the hash
-            
-            
+
+
 
             // get a vertex -> triangle map for each collision
 
             // loop through all the vertices and query for collisions
+            List<int> triangles = new List<int>();
 
-            for(int i = 0; i<pos.Length;i++)
+            for (int i = 0; i < pos.Length; i++)
             {
 
                 Vector3 queryPosition = pos[i];
                 Vector3 projectedQueryPosition = queryPosition + velocities[i] * timestep;
                 hash.Query(queryPosition); //returns querySize and queryIds.
-                
+
 
                 if (hash._QuerySize == 0)
                 {
                     continue;
                 }
 
-                for(int j = 0; j<hash._QuerySize;j++)
+                for (int j = 0; j < hash._QuerySize; j++)
                 {
                     int id = hash._QueryIds[j];
-                    if(id == i){
+                    if (id == i)
+                    {
                         continue;
                     }
 
-                    List<int> triangles = triangleMap[id];
+                    triangles = triangleMap[id];
                     //Debug.Log($"Number of Triangles: {triangles.Count} i {i}");
                     float epsilon = 1e-6f;
 
                     if (triangles.Count == 0)
                     {
                         continue;
-                    }	
+                    }
 
-                    for (int k = 0; k<triangles.Count;k++)
+                    for (int k = 0; k < triangles.Count; k++)
                     {
                         Triangle tri = _triangles[k];
 
@@ -761,16 +788,22 @@ namespace VirtualWorm
 
                         float d = Vector3.Dot(normal, AB);
 
-                        if(d + epsilon < cloth_thickness){
+                        totalChecks++;
+
+                        if (d + epsilon < cloth_thickness)
+                        {
 
                             //Generate the collision constraint.
-                            c.Add(new SelfCollisionConstraint(i,tri.a,tri.b,tri.c,cloth_thickness));
-                            
+                            c.Add(new SelfCollisionConstraint(i, tri.a, tri.b, tri.c, cloth_thickness));
+                            constraintsGenerated++;
+
                         }
-                        
+
                     }
-  
+
                 }
+                
+                Debug.Log($"Total Checks: {totalChecks} Constraints Generated: {constraintsGenerated}");
 
 
             }
@@ -805,7 +838,7 @@ namespace VirtualWorm
                 { 
                     throw new Exception("Triangle Map is null");
                 }
-
+                //Debug.Log($"Triangle Map: {triangleMap.Count}");
                 int[] adjacentTriangles = triangleMap[i].ToArray();
 
                 float weight = 0;

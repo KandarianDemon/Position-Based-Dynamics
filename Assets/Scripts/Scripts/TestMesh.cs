@@ -60,26 +60,33 @@ public class TestMesh : MonoBehaviour
         {
             case MeshType.Plane:
                 filter.mesh = MeshGenerator.GeneratePlane();
+                this.transform.name = "Procedural Plane";
                 break;
             case MeshType.Cube:
                 filter.mesh = MeshGenerator.GenerateCube();
+                this.transform.name = "Procedural Cube";
                 break;
             case MeshType.Sphere:
                 filter.mesh = MeshGenerator.GenerateSphere();
+                this.transform.name = "Procedural Sphere";
                 break;
             case MeshType.Tetrahedron:
                 filter.mesh = MeshGenerator.GenerateTetrahedron();
+                this.transform.name = "Procedural Tetrahedron";
                 break;
             case MeshType.Icosahedron:
                 filter.mesh = MeshGenerator.GenerateIcosahedron();
+                this.transform.name = "Procedural Icosahedron";
                 break;
 
             case MeshType.Icosphere:
                 filter.mesh = MeshGenerator.GenerateIcoSphere(this.subdivisions);
+                this.transform.name = "Procedural Icosphere";
                 break;
 
             case MeshType.Worm:
                 filter.mesh = MeshGenerator.GenerateWorm(subdivisions: this.subdivisions,length:this.worm_length, bulgeFactor:this.bulgeFactor);
+                this.transform.name = "Procedural Worm";
                 break;
         }
 
