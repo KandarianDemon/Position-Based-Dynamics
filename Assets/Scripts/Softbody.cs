@@ -21,6 +21,8 @@ using UnityEditor.EditorTools;
 
 
 
+
+
 namespace VirtualWorm
 {
     public enum ConstraintType
@@ -32,7 +34,11 @@ namespace VirtualWorm
 
     // store how many positions are affected by the constraints
 
-
+    public enum SoftbodyType
+    {
+        Cloth,
+        Worm
+    }
 
     public enum DampingMethod
     {
@@ -111,21 +117,33 @@ namespace VirtualWorm
         SpatialHashing hash;
         Constraint[] d_constraints;
         List<Constraint> collisionConstraints;
+        StaticCollisionConstraint[] staticCollisionConstraints;
         public bool[] pinnedIndices;
-        
-    [Header("Simulation Parameters")]
+        Collider[] collisionObjects;
+
+        [Header("Simulation Parameters")]
+     public SoftbodyType softbodyType = SoftbodyType.Cloth;
         public float timestep = 0.001f;
 
         public int iterations = 5;
         public bool gravity = false;
         public bool pressure_force = false;
+        public bool trap_box = false;
 
-        
+
         [Range(0.01f, 1.0f)]
         [Tooltip("Determines the mass of the cloth")]
+        [Header("Cloth Settings")]
         public float cloth_density = 1.0f;
         [Range(0.0f, 1.0f)]
         public float cloth_stiffness = 0.5f;
+        [Range(0.0f, 1.0f)]
+        public float bending_stiffness = 0.5f;
+
+        [Range(0.0f,2.0f)]
+        public float volume_stiffness = 0.5f;
+        [Range(0.0f, 10.0f)]
+        public float pressure = 0.1f;
         [Tooltip("Determines the thickness of the cloth. Used for self collision detection")]
         public float cloth_thickness = 0.5f;
         float mass;
@@ -142,8 +160,12 @@ namespace VirtualWorm
 
         Map<int> map = new Utils.Map<int>();
 
-        [Header("External Forces")]
+        
         Vector3 gravity_vec = new Vector3(0.0f,-9.81f,0.0f);
+        [Header("External Forces")]
+        public float dragCoefficient = 0.1f;
+        public float bounciness = 0.5f;
+        public float friction = 0.5f;
     
 
         public List<Vector3> forces = new List<Vector3>();
@@ -158,6 +180,8 @@ namespace VirtualWorm
         public bool pin_frame;
         [Tooltip("Displays the normals of the triangles and the velocity vectors of the vertices")]
         public bool triangle_normals;
+        [Tooltip("Displays the tangential and orthogonal forces")]
+        public bool display_drag = false;
         
         [Range(0.1f, 10.0f)]
         public float normal_length = 0.5f;
@@ -166,6 +190,7 @@ namespace VirtualWorm
         void Start()
         {
             InitializeSoftbody();
+            collisionObjects = FindObjectsOfType<Collider>();
           
 
             //Debug.Log($"Number of pinned indices: {pinnedIndices.Length}");
@@ -185,6 +210,11 @@ namespace VirtualWorm
 
 
 
+        }
+        void UpdateTransformPosition()
+        {
+            Vector3 center = GeometryCenter(projectedPositions);
+            //transform.position = center;
         }
         public void InitializeSoftbody()
         {
@@ -219,54 +249,56 @@ namespace VirtualWorm
 
 
             d_constraints = InitializeDistanceConstraints(mesh.triangles);
-            
+
             collisionConstraints = new List<Constraint>();
 
             pinnedIndices = new bool[positions.Length];
-            pinnedIndices[positions.Length-1] = true;
+            //pinnedIndices[positions.Length - 1] = true;
+          
 
             // if (positions.Length >= 12)
             // {
 
 
-            //     for (int i = positions.Length - 1; i > 0; i--)
-            //     {
-            //         if (i > positions.Length - 12)
-            //         {
-            //             pinnedIndices[i] = true;
+                //     for (int i = positions.Length - 1; i > 0; i--)
+                //     {
+                //         if (i > positions.Length - 12)
+                //         {
+                //             pinnedIndices[i] = true;
 
-            //         }
+                //         }
 
-            //         else if (i % 11 == 0 && pin_frame)
-            //         {
-            //             pinnedIndices[i] = true;
-            //         }
+                //         else if (i % 11 == 0 && pin_frame)
+                //         {
+                //             pinnedIndices[i] = true;
+                //         }
 
-            //         else if (pin_frame && new int[] { 0, 1, 21, 32, 43, 54, 65, 76, 87, 98, 109 }.Contains(i))
-            //         {
-            //             pinnedIndices[i] = true;
-            //         }
+                //         else if (pin_frame && new int[] { 0, 1, 21, 32, 43, 54, 65, 76, 87, 98, 109 }.Contains(i))
+                //         {
+                //             pinnedIndices[i] = true;
+                //         }
 
-            //         else if (i < 11 && pin_frame)
-            //         {
-            //             pinnedIndices[i] = true;
-            //         }
-            //         else
-            //         {
-            //             pinnedIndices[i] = false;
-            //         }
+                //         else if (i < 11 && pin_frame)
+                //         {
+                //             pinnedIndices[i] = true;
+                //         }
+                //         else
+                //         {
+                //             pinnedIndices[i] = false;
+                //         }
 
 
-            //     }
-            // }
+                //     }
+                // }
 
-            // else
-            // {
-            //     pinnedIndices[0] = true;
-            // }
+                // else
+                // {
+                //     pinnedIndices[0] = true;
+                // }
         }
-        private void OnDrawGizmos() {
-            if(positions == null)
+        private void OnDrawGizmos()
+        {
+            if (positions == null)
             {
                 return;
             }
@@ -275,11 +307,11 @@ namespace VirtualWorm
             {
                 for (int i = 0; i < positions.Length; i++)
                 {
-                    Handles.Label(positions[i]+transform.position, i.ToString());
+                    Handles.Label(positions[i] + transform.position, i.ToString());
                 }
             }
 
-            if(triangle_normals)
+            if (triangle_normals)
             {
                 if (_triangles == null)
                 {
@@ -289,92 +321,120 @@ namespace VirtualWorm
                 for (int i = 0; i < _triangles.Length; i++)
                 {
                     Gizmos.color = Color.blue;
-                    Gizmos.DrawLine(_triangles[i].center+transform.position, _triangles[i].center+transform.position + _triangles[i].normal * normal_length);
+                    Gizmos.DrawLine(_triangles[i].center + transform.position, _triangles[i].center + transform.position + _triangles[i].normal * normal_length);
                 }
 
-                for(int j = 0; j < positions.Length;j++){
+                for (int j = 0; j < positions.Length; j++)
+                {
                     Gizmos.color = Color.red;
                     Vector3 origin = positions[j] + transform.position;
-                    Gizmos.DrawLine(origin,origin+velocities[j]*normal_length);
+                    Gizmos.DrawLine(origin, origin + velocities[j] * normal_length);
                 }
             }
-        
-            if(d_constraints == null)
+
+            if (d_constraints == null)
             {
                 return;
             }
 
-            for(int i = 0; i < d_constraints.Length;i++)
+            for (int i = 0; i < d_constraints.Length; i++)
             {
-                if(display_vertex_numbers)
+                if (display_vertex_numbers)
                 {
 
-                if(d_constraints[i] is DistanceConstraint){
-                int a = d_constraints[i].ReturnIndices()[0];
-                int b = d_constraints[i].ReturnIndices()[1];
-
-                Gizmos.color = Color.red;
-                Gizmos.DrawLine(positions[a]+transform.position,positions[b]+transform.position);
-                }
-
-                  
-
-    
-                }
-
-                  if (display_normals)
+                    if (d_constraints[i] is DistanceConstraint)
                     {
-                        if (d_constraints[i] is BendingConstraint)
-                        {
+                        int a = d_constraints[i].ReturnIndices()[0];
+                        int b = d_constraints[i].ReturnIndices()[1];
 
-                            int a = d_constraints[i].ReturnIndices()[0];
-                            int b = d_constraints[i].ReturnIndices()[1];
-                            int c = d_constraints[i].ReturnIndices()[2];
-                            int d = d_constraints[i].ReturnIndices()[3];
-
-                            Vector3 A = positions[a];
-                            Vector3 B = positions[b];
-                            Vector3 C = positions[c];
-                            Vector3 D = positions[d];
-
-                            Vector3 AB = positions[b] - positions[a];
-                            Vector3 AC = positions[c] - positions[a];
-                            Vector3 AD = positions[a] - positions[d];
-
-                            Vector3 BC = positions[c] - positions[b];
-                            Vector3 BD = positions[d] - positions[b];
-
-                            Vector3 n1 = Vector3.Cross(AB, AC).normalized;
-                            Vector3 n2 = Vector3.Cross(AC, AD).normalized;
-
-                            float similarity = Vector3.Dot(n1, n2);
-
-                            float angle = Mathf.Acos(Vector3.Dot(n1, n2*-1));
-
-                            Vector3 normal = Vector3.Cross(AB, AC).normalized;
-
-                            Vector3 center1 = (A + B + C) / 3;
-                            Vector3 center2 = (A + D + C) / 3;
-
-
-                        if (similarity > 0) return; 
-                            Gizmos.color = Color.blue;
-                            Gizmos.DrawLine(center1+transform.position, center1+transform.position + n1*normal_length);
-
-                            Gizmos.DrawSphere(transform.position + center1, 0.1f);
-
-
-
-                            Gizmos.color = Color.green;
-                            Gizmos.DrawLine(center2+transform.position, center2+transform.position + n2*normal_length);
-
-                            Gizmos.DrawSphere(transform.position + center2, 0.2f);
-
-                            
-
-
-                        }
+                        Gizmos.color = Color.red;
+                        Gizmos.DrawLine(positions[a] + transform.position, positions[b] + transform.position);
                     }
+
+
+
+
+                }
+
+                if (display_normals)
+                {
+                    if (d_constraints[i] is BendingConstraint)
+                    {
+
+                        int a = d_constraints[i].ReturnIndices()[0];
+                        int b = d_constraints[i].ReturnIndices()[1];
+                        int c = d_constraints[i].ReturnIndices()[2];
+                        int d = d_constraints[i].ReturnIndices()[3];
+
+                        Vector3 A = positions[a];
+                        Vector3 B = positions[b];
+                        Vector3 C = positions[c];
+                        Vector3 D = positions[d];
+
+                        Vector3 AB = positions[b] - positions[a];
+                        Vector3 AC = positions[c] - positions[a];
+                        Vector3 AD = positions[a] - positions[d];
+
+                        Vector3 BC = positions[c] - positions[b];
+                        Vector3 BD = positions[d] - positions[b];
+
+                        Vector3 n1 = Vector3.Cross(AB, AC).normalized;
+                        Vector3 n2 = Vector3.Cross(AC, AD).normalized;
+
+                        float similarity = Vector3.Dot(n1, n2);
+
+                        float angle = Mathf.Acos(Vector3.Dot(n1, n2 * -1));
+
+                        Vector3 normal = Vector3.Cross(AB, AC).normalized;
+
+                        Vector3 center1 = (A + B + C) / 3;
+                        Vector3 center2 = (A + D + C) / 3;
+
+
+                        if (similarity > 0) return;
+                        Gizmos.color = Color.blue;
+                        Gizmos.DrawLine(center1 + transform.position, center1 + transform.position + n1 * normal_length);
+
+                        Gizmos.DrawSphere(transform.position + center1, 0.1f);
+
+
+
+                        Gizmos.color = Color.green;
+                        Gizmos.DrawLine(center2 + transform.position, center2 + transform.position + n2 * normal_length);
+
+                        Gizmos.DrawSphere(transform.position + center2, 0.2f);
+
+
+
+
+                    }
+                }
+            }
+
+            if (display_drag)
+            {
+                for (int i = 0; i < positions.Length; i++)
+                {
+                    Vector3 normal = Vector3.zero;
+                    Vector3 tangent = Vector3.zero;
+
+                    Triangle[] tris = triangleMap[i].Select(x => _triangles[x]).ToArray();
+                    foreach (var t in tris)
+                    {
+                        normal += t.normal;
+                    }
+
+                    tangent = Vector3.Cross(velocities[i], normal).normalized;
+
+                    Gizmos.color = Color.yellow;
+                    Gizmos.DrawLine(positions[i] + transform.position, positions[i] + transform.position + normal.normalized * normal_length);
+
+                    Gizmos.color = Color.red;
+                    Gizmos.DrawLine(positions[i] + transform.position, positions[i] + transform.position + tangent.normalized * normal_length);
+
+                    Gizmos.color = Color.green;
+                    Gizmos.DrawLine(positions[i] + transform.position, positions[i] + transform.position + velocities[i].normalized*normal_length);
+                }
             }
         }
 
@@ -388,69 +448,127 @@ namespace VirtualWorm
             {
                 return;
             }
-            foreach(var c in d_constraints){
-                if(c is DistanceConstraint){
+            foreach (var c in d_constraints)
+            {
+                if (c is DistanceConstraint)
+                {
                     DistanceConstraint dc = (DistanceConstraint)c;
                     dc.stiffness = cloth_stiffness;
                 }
+                if (c is VolumeConstraint)
+                {
+                    VolumeConstraint vc = (VolumeConstraint)c;
+                    vc.stiffness = volume_stiffness;
+                    vc.pressure = pressure;
+                }
+
+                if (c is BendingConstraint)
+                {
+                    BendingConstraint bc = (BendingConstraint)c;
+                    bc.stiffness = bending_stiffness;
+                }
+
+              
             }
             
         }
 
-        
 
-        void LateUpdate()
+
+        void Update()
         {
 
             //Debug.Log($"Number Of Constraints: {d_constraints.Length}");
             // bending constraint!
 
+            //timestep = Time.deltaTime;
+
             positions = mesh.vertices;
             // Apply external forces
-          
-
-            
-
            
+
+
+
             RecalculateTriangles();
-            if(collisionConstraints.Count > 0)
+            if (collisionConstraints.Count > 0)
             {
                 collisionConstraints.Clear();
             }
 
-            //GenerateCollisionConstraints(positions,ref collisionConstraints); 
-            //Debug.Log($"Number of Collision Constraints: {collisionConstraints.Count}");
-
-            //Debug.Log($"Number of Collision Constraints: {collisionConstraints.Count}");
 
 
-
-            //IntegrateVelocities(positions);
-            // This function kills the performance.
-
-
-
-
-
-            // now i need to loop over all the vertices. Doesnt seem to be efficient really...
-
-
-
+            IntegrateVelocities(positions);
+            DampVelocities();
             ProjectPositions(positions);
-            //ProjectCollisionConstraints(); //just for the test. later wrap both functions in an iterated for loop. Think about substepping.
-
-            ProjectConstraints(); 
             
-            //Super slow code. But first get the constraints working and closed meshes and cloth balloons. Then worry about optimization and performance
-            //RemoveCollisionConstraints(ref d_constraints);
+            StaticCollisions();
+            
+          
+            ProjectConstraints();
 
-            mesh.vertices = projectedPositions;
+            if (trap_box)
+            {
+                 for (int i = 0; i < projectedPositions.Length; i++)
+            {
+                if (projectedPositions[i].y < 0)
+                {
+                    projectedPositions[i].y = 0.001f;
+                }
+
+                if (projectedPositions[i].y > 10)
+                {
+                    projectedPositions[i].y = 9.999f;
+                }
+
+                if (projectedPositions[i].x < -10)
+                {
+                    projectedPositions[i].x = -9.999f;
+                }
+                if (projectedPositions[i].x > 10)
+                {
+                    projectedPositions[i].x = 9.999f;
+                }
+                if (projectedPositions[i].z < -10)
+                {
+                    projectedPositions[i].z = -9.999f;
+                }
+                if(projectedPositions[i].z > 10)
+                {
+                    projectedPositions[i].z = 9.999f;
+                }
+            }
+            }
+           
+            
+
+
             UpdateVelocities(ref velocities);
+            AddRestitutionAndFriction(ref velocities, ref staticCollisionConstraints);
+            mesh.vertices = projectedPositions;
+            
+            mesh.RecalculateNormals();
+            UpdateTransformPosition();
 
 
-            //transform.position = CenterOfMass(positions);
+            
 
 
+
+
+        }
+        public Vector3 GetPressureDirection(int index)
+        {
+
+            Triangle[] tris = triangleMap[index].Select(x => _triangles[x]).ToArray();
+
+            Vector3 netForce = new Vector3(0, 0, 0);
+
+            for (int i = 0; i < tris.Length; i++)
+            {
+                netForce += tris[i].normal;
+            }
+
+            return netForce/tris.Length;
             
 
         }
@@ -458,57 +576,120 @@ namespace VirtualWorm
 
         void IntegrateVelocities(Vector3[] positions)
         {
-            for (int i = 0; i < positions.Length; i++) {
+            for (int i = 0; i < positions.Length; i++)
+            {
                 //Debug.Log($" number of positions {positions.Length} current index {i} pinned indices {pinnedIndices.Length}");
-                if (pinnedIndices[i]) {
+                if (pinnedIndices[i])
+                {
                     continue;
                 }
 
-                Vector3 pos = positions[i];
+                if (gravity) velocities[i] += timestep * gravity_vec * (1 / weights[i]);
+                //DampVelocities(i, dampingMethod);
 
-                //Replace external forces by array of Force Vectors.
+                // Triangle[] tris = triangleMap[i].Select(x => _triangles[x]).ToArray();
 
+                // Vector3 normal = Vector3.zero;
 
-                //need to transform force direction from world to local space. Otherwise its just local space.
-                Vector3 netForce = new Vector3(0, 0, 0);
+                // foreach (var t in tris)
+                // {
+                //     normal += t.normal;
+                // }
 
-                for (int j = 0; j < forces.Count; j++)
-                {
-                    netForce += forces[j]*weights[j];
-                }
-                Vector3 localWind = this.transform.InverseTransformPoint(netForce);
+                // normal.Normalize();
+                // Vector3 normal2 = Vector3.Cross(velocities[i], normal);
 
-                if(gravity) velocities[i] += weights[i]*this.transform.TransformPoint(new Vector3(0,-0.981f,0)) * timestep;
+                // Vector3 w1 = Vector3.Dot(velocities[i], normal) * normal;
+                // Vector3 w2 = velocities[i] - w1;
 
-                //velocities[i] += localWind*wind_strength*timestep;
-                
-                if (pressure_force) velocities[i] += weights[i] * mesh.normals[i] * 2000.0f * timestep;
-                
+            
 
-                
-                //*(Mathf.PerlinNoise(pos.x,pos.z)+Time.deltaTime)*
-                DampVelocities(i,dampingMethod);  // I made this a function, so that i can later on add different methods of damping and it becomes easier to choose here which
-                                    // one should be applied.
-                
             }
         }
 
-        void UpdateVelocities(ref Vector3[] velocities){
+        void UpdateVelocities(ref Vector3[] velocities)
+        {
+            //  
+
 
 
             for (int i = 0; i < velocities.Length; i++)
             {
-                if(pinnedIndices[i]){
+                if (pinnedIndices[i])
+                {
                     velocities[i] = Vector3.zero;
                     continue;
                 }
                 velocities[i] = (projectedPositions[i] - positions[i]) / timestep;
-                if (gravity) velocities[i] += weights[i] * gravity_vec * 10.0f * timestep;
-                
+
+
+
+
+
+
             }
         }
 
-        void DampVelocities(int i, DampingMethod damp)
+        void AddRestitutionAndFriction(ref Vector3[] velocities, ref StaticCollisionConstraint[] constraints)
+            {
+
+                for (int i = 0; i < constraints.Length; i++)
+                {
+                    
+                    if (constraints[i] == null)
+                    {
+                        continue;
+                    }
+
+                    Vector3 normal = constraints[i].collisionNormal;
+                    Vector3 point = constraints[i].collisionPoint;
+                    Vector3 velocity = velocities[constraints[i].index];
+                    
+
+                float w = 1 / weights[i];
+
+                    // Calculate normal and tangent components of velocity
+            Vector3 normal_velocity = Vector3.Dot(velocity, normal) * normal;
+            Vector3 tangent_velocity = velocity - normal_velocity;  
+
+            // Apply restitution (bounce) in the normal direction
+            Vector3 normal_impulse = -bounciness * normal_velocity;
+
+            // Apply friction in the tangent direction (scaled by the inverse mass)
+            Vector3 tangent_impulse = -friction * tangent_velocity;
+
+            // Correct velocities using inverse mass and time step to ensure consistency across different frame rates
+            //velocities[constraints[i].index] += (normal_impulse + tangent_impulse) * (1 / weights[constraints[i].index]) * timestep;
+
+
+
+                }
+            
+
+
+            }
+        
+        
+        (Vector3, Vector3) GetCenterOfMassAndMeanVelocity(Vector3[] positions, Vector3[] velocities)
+        {
+            Vector3 centerOfMass = CenterOfMass(positions);
+            Vector3 meanVelocity = CenterOfMass(velocities);
+
+           
+            return (centerOfMass,meanVelocity);
+        }
+
+        void DampVelocities()
+        {
+            (Vector3, Vector3) cmvm = GetCenterOfMassAndMeanVelocity(positions, velocities);
+            
+            for(int i = 0; i<positions.Length; i++)
+            {
+             DampVelocities(i,dampingMethod,cmvm.Item1,cmvm.Item2);
+            }
+        }
+
+        void DampVelocities(int i, DampingMethod damp, Vector3 cm, Vector3 vm)
         {
             // Damp Velocities.
 
@@ -519,8 +700,7 @@ namespace VirtualWorm
                     break;
                 case DampingMethod.MuellerDamping:
                     // Mueller Damping
-                    Vector3 cm = CenterOfMass(positions);
-                    Vector3 vm = CenterOfMass(velocities);
+                    
 
                 
                     Vector3 angular_Momentum = ComuteAngularMomentum(cm);
@@ -548,6 +728,7 @@ namespace VirtualWorm
            
            
         }
+        
 
         void ProjectPositions(Vector3[] positions)
         {
@@ -557,36 +738,59 @@ namespace VirtualWorm
                     continue;
                 }
                 
-                velocities[i] += timestep * gravity_vec*100.0f*weights[i];
+               
+
+
+
                 projectedPositions[i] = positions[i] + velocities[i]  * timestep;
             }
         }
 
         void ProjectConstraints()
         {
-             for(int i = 0; i < iterations; i++){
-                
-                for(int j = 0; j<d_constraints.Length; j++)
-                
+            
+           
+            for (int i = 0; i < iterations; i++)
+            {
+
+                 for (int j = 0; j < staticCollisionConstraints.Length; j++)
+                    {
+                        if (staticCollisionConstraints[j] == null)
+                        {
+                        continue;
+                        }
+                        staticCollisionConstraints[j].Project(ref projectedPositions, pinnedIndices, iterations, weights);
+                    }
+
+
+
+                for (int j = 0; j < d_constraints.Length; j++)
+
                 {
 
-                    d_constraints[j].Project(ref projectedPositions,pinnedIndices,iterations,weights);
+                    d_constraints[j].Project(ref projectedPositions, pinnedIndices, iterations, weights);
                 }
-                
-                if(collisionConstraints == null || collisionConstraints.Count == 0)
-                {
-                    return;
-                }
-                for(int j = 0; j<collisionConstraints.Count; j++)
-                {
-                    collisionConstraints[j].Project(ref projectedPositions,pinnedIndices,iterations,weights);
-                }
-                
+
+
+
+
+                // if (collisionConstraints == null || collisionConstraints.Count == 0)
+                // {
+                //     continue;
+                // }
+                // for (int j = 0; j < collisionConstraints.Count; j++)
+                // {
+                //     collisionConstraints[j].Project(ref projectedPositions, pinnedIndices, iterations, weights);
+                // }
+
+
+                //Debug.Log($"Number of static collision constraints: {staticCollisionConstraints.Length}");
+
                 // for the distance constraint we need: the normal, the inverse mass and the error
 
                 //error
 
-        
+
             }
         }
 
@@ -661,6 +865,8 @@ namespace VirtualWorm
                 _triangles[i].GetCenter(ref positions);
             }
         }
+
+     
         
 
         Constraint[] InitializeDistanceConstraints( int[] triangles)
@@ -727,13 +933,90 @@ namespace VirtualWorm
 
             }
 
+            // compute initial volume
+
+            if(softbodyType == SoftbodyType.Worm)
+            {
+                AddVolumeConstraint(ref constraintList);
+            }
+            
+
+
             return constraintList.ToArray();
 
         }
 
-        
+        public void StaticCollisions()
+        {
+            // Static Collisions
+            // Check if the vertices are inside the collider.
+            // If they are, project them outwards.
+            // If they are not, do nothing.
 
-        void GenerateCollisionConstraints(Vector3[] pos,ref List<Constraint> c)
+            // for now just have a scene with few objects. plane, cube, sphere
+            if (collisionObjects == null)
+            {
+                return;
+            }
+
+
+            if (staticCollisionConstraints == null)
+            {
+                staticCollisionConstraints = new StaticCollisionConstraint[collisionObjects.Length * positions.Length];
+            }
+
+            for (int i = 0; i < staticCollisionConstraints.Length; i++)
+            {
+                staticCollisionConstraints[i] = null;
+            }
+
+            int constraintIndex = 0;
+            for (int i = 0; i < positions.Length; i++)
+            {
+                RaycastHit hit;
+                Vector3 direction = projectedPositions[i] - positions[i];
+                if (Physics.Raycast(this.transform.TransformPoint(positions[i]), direction, out hit, direction.magnitude))
+                {
+                    Vector3 normal = hit.normal;
+                    Vector3 point = hit.point;
+                    //Vector3 projected = positions[i] + Vector3.Project(point - positions[i], normal);
+
+                    staticCollisionConstraints[constraintIndex] = new StaticCollisionConstraint(i, point, normal);
+                    constraintIndex++;
+                    Debug.Log($"Collision Detected at {i} with {hit.collider.name}");
+                    // projectedPositions[i] = projected;
+                    // velocities[i] = velocities[i] * -1;
+
+
+                    // for the collision we need the point of the collision and the collision normal.
+                    // then we apply an inequality constraint.
+                }
+
+            }
+            
+            //Debug.Log($"Number of Static Collision Constraints: {constraintIndex}");
+
+
+            
+        }
+
+
+        float ComputeMeshVolume()
+        { 
+            float currentVolume = 0f;
+            foreach (var triangle in _triangles)
+            {
+                currentVolume += triangle.ComputeScalarTripleProduct(ref positions);
+            }
+            return currentVolume /= 6f; // Actual volume is sum/6
+        }
+
+        void AddVolumeConstraint(ref List<Constraint> c)
+        {
+            float currentVolume = ComputeMeshVolume();
+            c.Add(new VolumeConstraint(currentVolume,_triangles,stiffness:cloth_stiffness));
+        }
+        void GenerateCollisionConstraints(Vector3[] pos, ref List<Constraint> c)
         {
             if (hash == null) return;
 
@@ -741,6 +1024,8 @@ namespace VirtualWorm
             int constraintsGenerated = 0;
 
             hash.Create(pos); //First create the hash
+            SelfCollisionConstraint[] vc = new SelfCollisionConstraint[30000];
+            
 
 
 
@@ -749,6 +1034,9 @@ namespace VirtualWorm
             // loop through all the vertices and query for collisions
             List<int> triangles = new List<int>();
 
+
+            // for self collisions i need to test vertices against triangles
+            
             for (int i = 0; i < pos.Length; i++)
             {
 
@@ -794,7 +1082,12 @@ namespace VirtualWorm
                         {
 
                             //Generate the collision constraint.
-                            c.Add(new SelfCollisionConstraint(i, tri.a, tri.b, tri.c, cloth_thickness));
+                            //c.Add(new SelfCollisionConstraint(i, tri.a, tri.b, tri.c, cloth_thickness));
+                            if(constraintsGenerated >= vc.Length)
+                            {
+                                Array.Resize(ref vc,vc.Length*2);
+                            }
+                            vc[constraintsGenerated] = new SelfCollisionConstraint(i, tri.a, tri.b, tri.c, cloth_thickness);
                             constraintsGenerated++;
 
                         }
@@ -802,8 +1095,8 @@ namespace VirtualWorm
                     }
 
                 }
-                
-                Debug.Log($"Total Checks: {totalChecks} Constraints Generated: {constraintsGenerated}");
+
+                //Debug.Log($"Total Checks: {totalChecks} Constraints Generated: {constraintsGenerated}");
 
 
             }
@@ -814,11 +1107,11 @@ namespace VirtualWorm
             // called for each update
 
 
-            
 
-            
 
-              // 
+
+
+            // 
 
             // Destroy constraints after each update.
         }
@@ -904,6 +1197,18 @@ namespace VirtualWorm
             }
 
             return center/sum_of_weights;
+        }
+
+        Vector3 GeometryCenter(Vector3[] verts)
+        {
+            Vector3 center = new Vector3(0,0,0);
+
+            for(int i = 0; i<verts.Length; i++)
+            {
+                center += verts[i];
+            }
+
+            return center/verts.Length;
         }
 
         Vector3 ComuteAngularMomentum(Vector3 cm)

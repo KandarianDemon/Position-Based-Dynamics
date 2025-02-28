@@ -7,19 +7,22 @@ using UnityEditor;
 using MathNet.Numerics.LinearAlgebra.Double;
 using UnityEditor.PackageManager;
 using VirtualWorm;
+using Unity.VisualScripting;
 
-namespace Felix.Constraints{
+namespace Felix.Constraints
+{
 
 
 
-     public abstract class Constraint{
+    public abstract class Constraint
+    {
 
-        
 
-        public abstract void Project(ref Vector3[] positions, bool[] pinned, int iterations,float[] weights);
+
+        public abstract void Project(ref Vector3[] positions, bool[] pinned, int iterations, float[] weights);
         public abstract int[] ReturnIndices();
-        public abstract float[] ReturnWeightCorrection(float[] weights,int indexA, int indexB);
-       
+        public abstract float[] ReturnWeightCorrection(float[] weights, int indexA, int indexB);
+
     }
 
     class DistanceConstraint : Constraint
@@ -30,6 +33,7 @@ namespace Felix.Constraints{
         public float stiffness;
 
         public float mass;
+        float compliance;
 
         public DistanceConstraint(int i, int j, float restLength, float k, float m)
         {
@@ -40,48 +44,8 @@ namespace Felix.Constraints{
             this.mass = m;
         }
 
-//         public override void Project(ref Vector3[] positions, bool[] pinned, int iterations, float[] weights)
-// {
-//     int a = this.i;
-//     int b = this.j;
-
-//     Vector3 positionA = positions[a];
-//     Vector3 positionB = positions[b];
-
-//     // Compute distance error
-//     float distance = Vector3.Distance(positionA, positionB);
-//     float error = distance - this.restLength;
-//     Vector3 normal = (distance > 0) ? (positionA - positionB).normalized : Vector3.zero;
-
-//     // Apply Müller's stiffness decay per iteration
-//     float k_dot = 1 - Mathf.Pow((1 - stiffness), 1.0f / iterations); // Correct stiffness per iteration
-
-//     // Compute displacement correction
-//     Vector3 deltaP = error * normal * k_dot;
-
-//     // Weight corrections (inverse mass contributions)
-//     float wA = weights[a] > 0 ? 1.0f / weights[a] : 0.0f;
-//     float wB = weights[b] > 0 ? 1.0f / weights[b] : 0.0f;
-//     float sumW = wA + wB;
-    
-//     float weightA = (sumW > 0) ? wA / sumW : 0.5f;
-//     float weightB = (sumW > 0) ? wB / sumW : 0.5f;
-
-//     // Apply corrections
-//     if (!pinned[a] && !pinned[b])
-//     {
-//         positions[a] -= weightA * deltaP;
-//         positions[b] += weightB * deltaP;
-//     }
-//     else if (pinned[a])
-//     {
-//         positions[b] += deltaP;
-//     }
-//     else if (pinned[b])
-//     {
-//         positions[a] -= deltaP;
-//     }
-// }
+        
+       
 
 
         public override void Project(ref Vector3[] positions, bool[] pinned, int iterations, float[] weights)
@@ -118,14 +82,17 @@ namespace Felix.Constraints{
             float weight_correction_b = inverse_mass_b / (inverse_mass_a + inverse_mass_b);
 
             //float[] corrections = ReturnWeightCorrection(weights,a,b);
-            float[] corrections = new float[] {weight_correction_a,weight_correction_b};
+            float[] corrections = new float[] { weight_correction_a, weight_correction_b };
             //Debug.Log($"Weight Correction A: {weight_correction_a} Weight Correction B: {weight_correction_b} Inverse mass A: {inverse_mass_a} Inverse mass B: {inverse_mass_b}");
 
+
+
+           
 
             if (!pinned[a] && !pinned[b])
             {
                 // Split correction between both vertices
-                positions[a] -= corrections[0]* deltaP * k;
+                positions[a] -= corrections[0] * deltaP * k;
                 positions[b] += corrections[1] * deltaP * k;
             }
             else if (pinned[a])
@@ -167,9 +134,10 @@ namespace Felix.Constraints{
     }
 
 
-    class BendingConstraint : Constraint {
+    class BendingConstraint : Constraint
+    {
 
-       
+
         public int a;
         public int b;
         public int c;
@@ -179,8 +147,9 @@ namespace Felix.Constraints{
         public float initial_angle;
         public float mass;
 
-        public BendingConstraint(int a, int b, int c,int d, float stiff,float initial_angle,float m){
-            
+        public BendingConstraint(int a, int b, int c, int d, float stiff, float initial_angle, float m)
+        {
+
             this.a = a;
             this.b = b;
             this.c = c;
@@ -193,7 +162,7 @@ namespace Felix.Constraints{
 
         public override void Project(ref Vector3[] positions, bool[] pinned, int iterations, float[] weights)
         {
-            
+
             // for the bending constraint
 
             // Ensure normals point in the same direction. Constraint initialization should capture face orientation. Yes, thats whats causing issues
@@ -215,9 +184,9 @@ namespace Felix.Constraints{
 
             float clamped_dot = Mathf.Clamp(Vector3.Dot(n1, -n2), -1, 1);
             float acos = Mathf.Acos(clamped_dot);
-            float angle = Mathf.Clamp(acos,-1.0f,1.0f);
+            //float angle = Mathf.Clamp(acos, -1.0f, 1.0f);
 
-            float error = angle - initial_angle;
+            float error = acos - initial_angle;
 
             float weight = 1 / this.mass;
             float d = Vector3.Dot(n1, n2); // 
@@ -259,25 +228,46 @@ namespace Felix.Constraints{
             //Debug.Log($"q1: {q1} q2: {q2} q3: {q3} q4: {q4} angle: {angle} d: {d} BxN1: {BxN1} B: {B} n1: {n1}" );
 
 
-             float[] inv_masses = new float[4] { 1 / weights[this.a], 1 / weights[this.b], 1 / weights[this.c], 1 / weights[this.d] };
-
+            float[] inv_masses = new float[4] { 1 / weights[this.a], 1 / weights[this.b], 1 / weights[this.c], 1 / weights[this.d] };
+            //Debug.Log($"inverse masses: {inv_masses[0]} {inv_masses[1]} {inv_masses[2]} {inv_masses[3]} weights: {weights[this.a] }" );
             // final correction according to Mueller et al 2006:
-            float upper = -inv_masses[0]* Mathf.Sqrt(1 - (d * d)) * error;
-            float upper2 = -inv_masses[1]* Mathf.Sqrt(1 - (d * d)) * error;
-            float upper3 = -inv_masses[2]* Mathf.Sqrt(1 - (d * d)) * error;
-            float upper4 = -inv_masses[3]* Mathf.Sqrt(1 - (d * d)) * error;
+            float upper = -inv_masses[0] * Mathf.Sqrt(1 - (d * d)) * error;
+            float upper2 = -inv_masses[1] * Mathf.Sqrt(1 - (d * d)) * error;
+            float upper3 = -inv_masses[2] * Mathf.Sqrt(1 - (d * d)) * error;
+            float upper4 = -inv_masses[3] * Mathf.Sqrt(1 - (d * d)) * error;
 
-           
 
-            float lower =   inv_masses[1] * (q2.sqrMagnitude) + inv_masses[2] * (q3.sqrMagnitude) + inv_masses[3] * (q4.sqrMagnitude) + 1e-6f; //important: its the squared magnitude of the q's
-            float lower2 = inv_masses[0]*(q1.sqrMagnitude)  + inv_masses[2] *(q3.sqrMagnitude)  + inv_masses[3]*(q4.sqrMagnitude) + 1e-6f; //important: its the squared magnitude of the q's
-            float lower3 = inv_masses[0]*(q1.sqrMagnitude) + inv_masses[1] *(q2.sqrMagnitude)  +   + inv_masses[3]*(q4.sqrMagnitude) + 1e-6f; //important: its the squared magnitude of the q's
-            float lower4 = inv_masses[0]*(q1.sqrMagnitude) + inv_masses[1] *(q2.sqrMagnitude)  + inv_masses[2] *(q3.sqrMagnitude) + 1e-6f; //important: its the squared magnitude of the q's
+
+            float lower = inv_masses[1] * (q2.sqrMagnitude) + inv_masses[2] * (q3.sqrMagnitude) + inv_masses[3] * (q4.sqrMagnitude) + 1e-6f; //important: its the squared magnitude of the q's
+            float lower2 = inv_masses[0] * (q1.sqrMagnitude) + inv_masses[2] * (q3.sqrMagnitude) + inv_masses[3] * (q4.sqrMagnitude) + 1e-6f; //important: its the squared magnitude of the q's
+            float lower3 = inv_masses[0] * (q1.sqrMagnitude) + inv_masses[1] * (q2.sqrMagnitude) + +inv_masses[3] * (q4.sqrMagnitude) + 1e-6f; //important: its the squared magnitude of the q's
+            float lower4 = inv_masses[0] * (q1.sqrMagnitude) + inv_masses[1] * (q2.sqrMagnitude) + inv_masses[2] * (q3.sqrMagnitude) + 1e-6f; //important: its the squared magnitude of the q's
             if (lower < 1e-6f || lower2 < 1e-6f || lower3 < 1e-6f || lower4 < 1e-6f)
             {
-                
+
                 return; // Prevent NaN
-            } 
+            }
+
+            // for (int i = 0; i < 4; i++)
+            // {
+            //     if (float.IsNaN(inv_masses[i]) || float.IsInfinity(inv_masses[i]))
+            //     {
+            //         return;
+            //     }
+            //     float numerator = -inv_masses[0] * Mathf.Sqrt(1 - (d * d)) * error;
+            //     float denom = 0;
+            //     for (int j = 0; j < 4; j++)
+            //     {
+            //         if (j == i) continue;
+            //         denom += inv_masses[j] * (i == 0 ? q1.sqrMagnitude : i == 1 ? q2.sqrMagnitude : i == 2 ? q3.sqrMagnitude : q4.sqrMagnitude);
+            //     }
+            //     if(denom < 1e-6f) return;
+            //     Vector3 delta_p = (numerator / denom) * (i == 0 ? q1 : i == 1 ? q2 : i == 2 ? q3 : q4);
+            //     int index = i == 0 ? this.a : i == 1 ? this.b : i == 2 ? this.c : this.d;
+            //     if(!pinned[index]) positions[index] += delta_p;
+
+
+            // }
 
             //Somewhere in this code something becomes NaN or Infinity!
 
@@ -286,42 +276,49 @@ namespace Felix.Constraints{
             Vector3 delta_p3 = (upper3 / lower3) * q3;
             Vector3 delta_p4 = (upper4 / lower4) * q4;
 
-            
+
             // if (!pinned[this.a]) positions[this.a] += delta_p1;
             // if (!pinned[this.b]) positions[this.b] += delta_p2;
             // if (!pinned[this.c]) positions[this.c] += delta_p3;
             // if (!pinned[this.d]) positions[this.d] += delta_p4;
-            
-            if (!pinned[this.a]) positions[this.a] += 0.0001f*delta_p1.normalized ;
-            if (!pinned[this.b]) positions[this.b] += 0.0001f*delta_p2.normalized ;
-            if (!pinned[this.c]) positions[this.c] += 0.0001f*delta_p3.normalized ;
-            if (!pinned[this.d]) positions[this.d] += 0.0001f*delta_p4.normalized ;
+
+            if (float.IsNaN(delta_p1.x) || float.IsNaN(delta_p1.y) || float.IsNaN(delta_p1.z) || float.IsInfinity(delta_p1.x) || float.IsInfinity(delta_p1.y) || float.IsInfinity(delta_p1.z))
+            {
+                //Debug.Log($"delta_p1: {delta_p1} delta_p2: {delta_p2} delta_p3: {delta_p3} delta_p4: {delta_p4}");
+                return;
+            }
+
+            if (!pinned[this.a]) positions[this.a] += delta_p1 * stiffness * 0.01f;
+            if (!pinned[this.b]) positions[this.b] += delta_p2 * stiffness * 0.01f;
+            if (!pinned[this.c]) positions[this.c] += delta_p3 * stiffness * 0.01f;
+            if (!pinned[this.d]) positions[this.d] += delta_p4 * stiffness * 0.01f;
+            //Debug.Log($"delta_p1: {delta_p1} delta_p2: {delta_p2} delta_p3: {delta_p3} delta_p4: {delta_p4}");
 
 
 
 
-            
+
         }
 
         public override int[] ReturnIndices()
         {
-            return new int[4]{this.a,this.b,this.c,this.d}; 
+            return new int[4] { this.a, this.b, this.c, this.d };
         }
 
-        public override float[] ReturnWeightCorrection(float[] weights,int indexA, int indexB)
+        public override float[] ReturnWeightCorrection(float[] weights, int indexA, int indexB)
         {
-            float inverse_mass_a = 1/weights[indexA];
-            float inverse_mass_b = 1/weights[indexB];
+            float inverse_mass_a = 1 / weights[indexA];
+            float inverse_mass_b = 1 / weights[indexB];
 
             float weight_correction_a = inverse_mass_a / (inverse_mass_a + inverse_mass_b);
             float weight_correction_b = inverse_mass_b / (inverse_mass_a + inverse_mass_b);
 
-            return new float[2]{weight_correction_a,weight_correction_b};
+            return new float[2] { weight_correction_a, weight_correction_b };
         }
     }
 
-    public class SelfCollisionConstraint: Constraint
-    
+    public class SelfCollisionConstraint : Constraint
+
     {
 
         int q;
@@ -332,7 +329,7 @@ namespace Felix.Constraints{
 
         int count;
 
-        public SelfCollisionConstraint(int q, int p1, int p2, int p3,float cloth_thickness)
+        public SelfCollisionConstraint(int q, int p1, int p2, int p3, float cloth_thickness)
         {
             this.q = q;
             this.p1 = p1;
@@ -347,16 +344,16 @@ namespace Felix.Constraints{
         }
         public override void Project(ref Vector3[] positions, bool[] pinned, int iterations, float[] weights)
         {
-           
+
             // C(q,p1,p2,p3) = (q-p1)  P2P1_normalized x p3p1_normalized - h     || h = cloth thickness.
 
             // derivative of n with respect to K,L.
             Vector3 A = positions[p2] - positions[p1];
-            Vector3 B =  positions[p3] - positions[p1];
+            Vector3 B = positions[p3] - positions[p1];
 
             Vector3 d = positions[q] - positions[p1];
 
-            Vector3 n = Vector3.Cross(A,B).normalized;
+            Vector3 n = Vector3.Cross(A, B).normalized;
 
             Matrix4x4 a_x = A.ToSkewSymmetricMatrix();
             Matrix4x4 b_x = B.ToSkewSymmetricMatrix();
@@ -384,11 +381,11 @@ namespace Felix.Constraints{
 
 
 
-           
 
 
 
-         
+
+
 
 
 
@@ -405,27 +402,27 @@ namespace Felix.Constraints{
             float error = qp1_dot - cloth_thickness;
 
             // 0  -Kz  Ky
-            
-            float sum_of_weights =  weights[p1]*Cp1.sqrMagnitude 
-                                    + weights[p2]*Cp2.sqrMagnitude 
-                                    + weights[p3]*Cp3.sqrMagnitude 
-                                    + weights[q]*Cq.sqrMagnitude;
+
+            float sum_of_weights = weights[p1] * Cp1.sqrMagnitude
+                                    + weights[p2] * Cp2.sqrMagnitude
+                                    + weights[p3] * Cp3.sqrMagnitude
+                                    + weights[q] * Cq.sqrMagnitude;
 
             float[] relative_weights = new float[] {
-                
-                weights[q] / (weights[p1]*Cp1.sqrMagnitude 
-                                    + weights[p2]*Cp2.sqrMagnitude 
+
+                weights[q] / (weights[p1]*Cp1.sqrMagnitude
+                                    + weights[p2]*Cp2.sqrMagnitude
                                     + weights[p3]*Cp3.sqrMagnitude ),
-                weights[p1] / (weights[p2]*Cp2.sqrMagnitude 
-                                    + weights[p3]*Cp3.sqrMagnitude 
+                weights[p1] / (weights[p2]*Cp2.sqrMagnitude
+                                    + weights[p3]*Cp3.sqrMagnitude
                                     + weights[q]*Cq.sqrMagnitude),
-                weights[p2] / (weights[p1]*Cp1.sqrMagnitude 
-                                    + weights[p3]*Cp3.sqrMagnitude 
+                weights[p2] / (weights[p1]*Cp1.sqrMagnitude
+                                    + weights[p3]*Cp3.sqrMagnitude
                                     + weights[q]*Cq.sqrMagnitude),
-                weights[p3] / (weights[p2]*Cp2.sqrMagnitude 
-                                    + weights[p1]*Cp1.sqrMagnitude 
+                weights[p3] / (weights[p2]*Cp2.sqrMagnitude
+                                    + weights[p1]*Cp1.sqrMagnitude
                                     + weights[q]*Cq.sqrMagnitude)
-                
+
             };
 
             Vector3[] delta_ps = new Vector3[]{
@@ -435,21 +432,21 @@ namespace Felix.Constraints{
                 -relative_weights[2] * error * Cp2,
                 -relative_weights[3] * error * Cp3
             };
-            
-        
-            positions[q] += 0.001f*delta_ps[0];
-            positions[p1] += 0.001f*delta_ps[1];
-            positions[p2] += 0.001f*delta_ps[2];
-            positions[p3] += 0.001f*delta_ps[3];
+
+
+            positions[q] += 0.01f * delta_ps[0];
+            positions[p1] += 0.01f * delta_ps[1];
+            positions[p2] += 0.01f * delta_ps[2];
+            positions[p3] += 0.01f * delta_ps[3];
 
 
 
             // 
 
 
-            
 
-        
+
+
         }
 
         public override int[] ReturnIndices()
@@ -467,53 +464,185 @@ namespace Felix.Constraints{
         public void Unsubscribe(ref List<Constraint> constraints)
         {
             constraints.Remove(this);
-            
+
             // delete yourself from the constraint list once all interations have been projected.
         }
     }
 
-
-    public class VolumeConstraint : Constraint{
-
-        // This constraint ensures _ FOR A CLOSED MESH_ that the volume of the mesh remains constant.   
-        // Its supposed to be used for a cloth balloon that models a pressurized C. elegans model.
-        float initialVolume;
-        Triangle[] mesh_triangles;
-
-        public VolumeConstraint(float V0, Triangle[] triangles)
+    public class StaticCollisionConstraint : Constraint
+    {
+        public Vector3 collisionPoint;
+        public Vector3 collisionNormal;
+        public int index;
+        
+        public StaticCollisionConstraint(int index, Vector3 collisionPoint, Vector3 collisionNormal)
         {
-            this.initialVolume = V0;
-            this.mesh_triangles = triangles;
+            this.index = index;
+            this.collisionPoint = collisionPoint;
+            this.collisionNormal = collisionNormal;
+            
         }
-        
-        
+
+
         public override void Project(ref Vector3[] positions, bool[] pinned, int iterations, float[] weights)
         {
 
-            foreach(var triangle in this.mesh_triangles)
+            // C(p) = (p - collisionPoint) * collisionNormal || C(p) != 0
+            // get gradients of C(p) with respect to p
+
+            float penetration_depth = Vector3.Dot(positions[this.index] - collisionPoint, collisionNormal);
+            //Debug.Log($"penetration depth: {penetration_depth}");
+            if(penetration_depth > 0.001f)
             {
-                float volume = triangle.ComputeScalarTripleProduct(ref positions);
-                // Compute the volume of the triangle
-                // Compute the gradient of the volume
-                // Compute the weighting factor
-                // Compute the delta p
-                // Apply the delta p
+                return;
             }
+
+            Vector3 gradient = collisionNormal.normalized;
+
+
+            Vector3 delta_p = -gradient * penetration_depth;
+
+            float s = -penetration_depth/(1/weights[this.index] * gradient.sqrMagnitude);
+            positions[this.index] += delta_p * weights[this.index];
+
+            float new_penetration_depth = Vector3.Dot(positions[this.index] - collisionPoint, collisionNormal);
+             
+             //Debug.Log($"old penetration depth {penetration_depth} || after correction: {new_penetration_depth}");
             
 
 
-            throw new System.NotImplementedException();
-        }
+            
 
-        public override float[] ReturnWeightCorrection(float[] weights, int indexA, int indexB)
-        {
-            throw new System.NotImplementedException();
+
+
+
+
         }
 
         public override int[] ReturnIndices()
         {
-            throw new System.NotImplementedException();
+            return new int[1] { this.index };
+        }
+
+        public override float[] ReturnWeightCorrection(float[] weights, int indexA, int indexB)
+        {
+            throw new NotImplementedException();
         }
     }
+
+
+    public class VolumeConstraint : Constraint
+    {
+        float initialVolume;
+        Triangle[] mesh_triangles;
+        public float stiffness;
+        public float pressure;
+
+        public VolumeConstraint(float V0, Triangle[] triangles, float stiffness)
+        {
+            this.initialVolume = V0;
+            this.mesh_triangles = triangles;
+            this.stiffness = stiffness;
+            this.pressure = 2.2f;
+        }
+
+        public override void Project(ref Vector3[] positions, bool[] pinned, int iterations, float[] weights)
+        {
+            // 1. Calculate current volume and constraint value
+            float currentVolume = 0f;
+            foreach (var triangle in mesh_triangles)
+            {
+                currentVolume += triangle.ComputeScalarTripleProduct(ref positions);
+            }
+            currentVolume /= 6f; // Actual volume is sum/6
+
+            float C = currentVolume - (pressure * initialVolume);
+
+            // Early out if constraint is satisfied
+            if (Mathf.Abs(C) < 1e-6f)
+                return;
+
+            // 2. Calculate gradients for each vertex
+            Dictionary<int, Vector3> gradients = new Dictionary<int, Vector3>();
+
+            foreach (var triangle in mesh_triangles)
+            {
+                Vector3 p1 = positions[triangle.a];
+                Vector3 p2 = positions[triangle.b];
+                Vector3 p3 = positions[triangle.c];
+
+                // Calculate cross products for gradient contributions
+                Vector3 cross23 = Vector3.Cross(p2, p3);
+                Vector3 cross31 = Vector3.Cross(p3, p1);
+                Vector3 cross12 = Vector3.Cross(p1, p2);
+
+                // Initialize or add to existing gradients
+                AddOrUpdateGradient(gradients, triangle.a, cross23);
+                AddOrUpdateGradient(gradients, triangle.b, cross31);
+                AddOrUpdateGradient(gradients, triangle.c, cross12);
+            }
+
+            // 3. Calculate sum of squared gradients weighted by inverse masses
+            float sumSquaredGradients = 0f;
+            foreach (var kvp in gradients)
+            {
+                int vertexIndex = kvp.Key;
+                Vector3 gradient = kvp.Value;
+
+                if (!pinned[vertexIndex])
+                {
+                    sumSquaredGradients += Vector3.Dot(gradient, gradient) * weights[vertexIndex];
+                }
+            }
+
+            // 4. Calculate scaling factor (lambda)
+            if (sumSquaredGradients == 0f)
+                return;
+
+            float lambda = -C / sumSquaredGradients;
+
+            // 5. Apply position corrections
+            foreach (var kvp in gradients)
+            {
+                int vertexIndex = kvp.Key;
+                Vector3 gradient = kvp.Value;
+
+                if (!pinned[vertexIndex])
+                {
+                    Vector3 deltaP = lambda * weights[vertexIndex] * gradient;
+                    positions[vertexIndex] += deltaP * stiffness;
+                }
+            }
+        }
+
+        private void AddOrUpdateGradient(Dictionary<int, Vector3> gradients, int vertexIndex, Vector3 contribution)
+        {
+            if (gradients.ContainsKey(vertexIndex))
+                gradients[vertexIndex] += contribution;
+            else
+                gradients[vertexIndex] = contribution;
+        }
+
+        public override float[] ReturnWeightCorrection(float[] weights, int indexA, int indexB)
+        {
+            // For volume constraint, we don't need special weight correction
+            return weights;
+        }
+
+        public override int[] ReturnIndices()
+        {
+            // Return all vertex indices involved in the constraint
+            HashSet<int> indices = new HashSet<int>();
+            foreach (var triangle in mesh_triangles)
+            {
+                indices.Add(triangle.a);
+                indices.Add(triangle.b);
+                indices.Add(triangle.c);
+            }
+            return indices.ToArray();
+        }
+    }
+
+
 }
 

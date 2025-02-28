@@ -456,7 +456,7 @@ namespace Felix.MeshGeneration
         }
 
 
-        public static Mesh GenerateWorm(float radius = 1f, float length = 10f, int subdivisions = 1, int cylinderSegments = 28, float bulgeFactor = 0.5f)
+        public static Mesh GenerateWorm(float radius = 1f, float length = 10f, int subdivisions = 1, int cylinderSegments = 28, float bulgeFactor = 0.5f, float elongation = 2.0f)
         {
             Mesh wormMesh = new Mesh();
             List<Vector3> vertices = new List<Vector3>();
@@ -504,7 +504,7 @@ namespace Felix.MeshGeneration
                 if (sphereVerts[i].y <= tolerance)
                 {
                     frontVertexMap[i] = frontVerts.Count;
-                    frontVerts.Add(new Vector3(sphereVerts[i].x * radius, sphereVerts[i].y * 2.0f * radius, sphereVerts[i].z * radius));
+                    frontVerts.Add(new Vector3(sphereVerts[i].x * radius, sphereVerts[i].y * elongation * radius, sphereVerts[i].z * radius));
                 }
             }
 
@@ -802,109 +802,186 @@ namespace Felix.MeshGeneration
 
             }
 
-            for (int i = cylinderOffset + cylinderVerts.Count - 2*vertsPerRing; i < vertices.Count -backOffset; i++)
+
+
+
+
+
+            for (int i = 0; i < vertsPerRing - 1; i++)
             {
-                 Debug.DrawLine(vertices[i], vertices[i] + Vector3.up * 0.1f, Color.yellow, 1000f);
-            }
-            
-             
+                int j = i;
 
+                // Vector3 a1 = vertices[map[j]];
+                // Vector3 b1 = vertices[map[j + 1]];
+                // Vector3 c1 = vertices[frontVerts.Count + j];
+                // Vector3 d1 = vertices[frontVerts.Count + j + 1];
 
+                // Debug.DrawLine(a1, b1, Color.green, 1000f);
+                // Debug.DrawLine(b1, c1, Color.green, 1000f);
+                // Debug.DrawLine(c1, a1, Color.green, 1000f);
 
-            for (int i = 0; i < vertsPerRing; i++)
-                {
-                    int j = (i == vertsPerRing - 1) ? 0 : i;
+                // Debug.DrawLine(c1, b1, Color.green, 1000f);
+                // Debug.DrawLine(b1, d1, Color.green, 1000f);
+                // Debug.DrawLine(d1, c1, Color.green, 1000f);
 
-                    // Vector3 a1 = vertices[map[j]];
-                    // Vector3 b1 = vertices[map[j + 1]];
-                    // Vector3 c1 = vertices[frontVerts.Count + j];
-                    // Vector3 d1 = vertices[frontVerts.Count + j + 1];
+                triangles.Add(map[j]);
 
-                    // Debug.DrawLine(a1, b1, Color.green, 1000f);
-                    // Debug.DrawLine(b1, c1, Color.green, 1000f);
-                    // Debug.DrawLine(c1, a1, Color.green, 1000f);
+                triangles.Add(frontVerts.Count + j);
+                triangles.Add(map[j + 1]);
 
-                    // Debug.DrawLine(c1, b1, Color.green, 1000f);
-                    // Debug.DrawLine(b1, d1, Color.green, 1000f);
-                    // Debug.DrawLine(d1, c1, Color.green, 1000f);
+                triangles.Add(frontVerts.Count + j);
+                triangles.Add(frontVerts.Count + j + 1);
+                triangles.Add(map[j + 1]);
 
-                    triangles.Add(map[j]);
+                //Top part
 
-                    triangles.Add(frontVerts.Count + j);
-                    triangles.Add(map[j + 1]);
+              
 
-                    triangles.Add(frontVerts.Count + j);
-                    triangles.Add(frontVerts.Count + j + 1);
-                    triangles.Add(map[j + 1]);
+                
                 }
 
-            map.Clear();
+                int last = vertsPerRing - 1;
+                triangles.Add(map[last]);
+                triangles.Add(frontVerts.Count + last);
+                triangles.Add(map[0]);  // Connect back to first vertex
+
+                triangles.Add(frontVerts.Count + last);
+                triangles.Add(frontVerts.Count);  // Connect back to first vertex in the other ring
+                triangles.Add(map[0]);
+
+           
+
+            // doesnt work for the backvertices, because they are offset 
             
             for (int i = 0; i < equatorIndices.Count; i++)
             {
                 Vector3 og = sphereVerts[equatorIndices[i]];
                 for (int j = 0; j < backVerts.Count; j++)
                 {
-                    if (backVerts[j] == og)
+                    if (backVerts[j] == og + new Vector3(0, -length, 0)) 
                     {
-                        map.Add(i, j);
+                        map.Add(i, j + backOffset);
                     }
                 }
             }
+
+            for (int i = backOffset - vertsPerRing; i < backOffset; i++)
+            {
+                Debug.DrawLine(vertices[i], vertices[i] + Vector3.up * 0.1f, Color.yellow, 1000f);
+
+                // if (map.ContainsKey(i - cylinderVerts.Count))
+                // {
+                //     Debug.Log("GOTCHA!");
+                //     Vector3 p = vertices[map[i - backOffset]];
+                //     Debug.DrawLine(p, p + Vector3.up * 0.1f, Color.blue, 1000f);
+                // }
+                 
+                 
+            }
             
-            //   for (int i = 0; i < vertsPerRing; i++)
+            
+
+            foreach (var k in map.Keys)
+            {
+                Debug.DrawLine(vertices[map[k]], vertices[map[k]] + Vector3.up * 0.1f, Color.magenta, 1000f);
+
+            }
+
+
+            // stitch the back hemisphere to the cylinder
+
+            for (int i = backOffset - vertsPerRing; i < backOffset; i++)
+            {
+                //should be final ring of the cylinder.
+                Debug.DrawLine(vertices[i], vertices[i] + Vector3.up * 0.1f, Color.magenta, 1000f);
+            }
+
+            // int count = 0;
+            // int f = -1;
+            // foreach (var e in map)
             // {
-            //     int j = (i == vertsPerRing - 1) ? 0 : i;
 
-            //     // Vector3 a1 = vertices[map[j]];
-            //     // Vector3 b1 = vertices[map[j + 1]];
-            //     // Vector3 c1 = vertices[frontVerts.Count + j];
-            //     // Vector3 d1 = vertices[frontVerts.Count + j + 1];
+            //     Debug.Log($"key: {e.Key} value: {e.Value} map count {map.Count}");
+            //     Debug.DrawLine(vertices[e.Value + backOffset], vertices[e.Value + backOffset] + Vector3.up * 0.01f, Color.yellow, 1000f);
+            //     //Debug.DrawLine(vertices[backOffset - vertsPerRing], vertices[e.Value + backOffset], Color.green, 1000f);
 
-            //     // Debug.DrawLine(a1, b1, Color.green, 1000f);
-            //     // Debug.DrawLine(b1, c1, Color.green, 1000f);
-            //     // Debug.DrawLine(c1, a1, Color.green, 1000f);
+            //     if (count < (vertsPerRing / 2) - 1)
+            //     {
+                    
+            //         Debug.DrawLine(vertices[backOffset - vertsPerRing / 2 + count], vertices[e.Value + backOffset], Color.red, 1000f);
+            //         Debug.DrawLine(vertices[backOffset - vertsPerRing / 2 + count], vertices[backOffset - vertsPerRing / 2 + count + 1], Color.red, 1000f);
+                    
+            //     }
 
-            //     // Debug.DrawLine(c1, b1, Color.green, 1000f);
-            //     // Debug.DrawLine(b1, d1, Color.green, 1000f);
-            //     // Debug.DrawLine(d1, c1, Color.green, 1000f);
+        
 
-            //     triangles.Add(map[j + cylinderOffset]);
 
-            //     triangles.Add( j + cylinderOffset);
-            //     triangles.Add(map[j + 1 + cylinderOffset]);
+            //     else
+            //     {
+            //         Debug.DrawLine(vertices[backOffset - vertsPerRing + f], vertices[e.Value + backOffset], Color.blue, 1000f);
+            //         Debug.DrawLine(vertices[backOffset - vertsPerRing + f], vertices[backOffset - vertsPerRing + f + 1], Color.blue, 1000f);
+            //         f++;
+            //     }
 
-            //     triangles.Add(frontVerts.Count + j + cylinderOffset);
-            //     triangles.Add(frontVerts.Count + j + 1 + cylinderOffset);
-            //     triangles.Add(map[j + 1 + cylinderOffset]);
+
+
+            //     // Debug.DrawLine(vertices[backOffset + vertsPerRing + vertsPerRing / 2 + count], vertices[backOffset + vertsPerRing + vertsPerRing / 2 + count +1], Color.red, 1000f);
+            //     // Debug.DrawLine(vertices[backOffset - vertsPerRing + vertsPerRing / 2 + count + 1], vertices[e.Value + backOffset], Color.red, 1000f);
+
+            //     count++;
+
             // }
             
-           
-          
+            int count = 0;
+int f = 0;
+for (int i = 0; i < vertsPerRing - 1; i++)
+{
+    if (count < (vertsPerRing / 2) - 1)
+    {
+        // First half - connecting with backOffset - vertsPerRing/2
+        triangles.Add(map[i] + backOffset);
+         triangles.Add(map[i + 1] + backOffset);
+        triangles.Add(backOffset - vertsPerRing / 2 + count + 1);
+       
 
+        triangles.Add(backOffset - vertsPerRing / 2 + count);
+        triangles.Add(map[i] + backOffset);
+        triangles.Add(backOffset - vertsPerRing / 2 + count + 1);
+        
+    }
+    else
+    {
+        // Second half - connecting with backOffset - vertsPerRing + f
+        triangles.Add(map[i] + backOffset);
+        triangles.Add(map[i + 1] + backOffset);
+        triangles.Add(backOffset - vertsPerRing + f);
+        
 
+        triangles.Add(backOffset - vertsPerRing + f);
+        triangles.Add(map[i + 1] + backOffset);
+        triangles.Add(backOffset - vertsPerRing + f + 1);
+        
+        f++;
+    }
+    count++;
+}
 
-
-
-           
-
-
-          
-            //DebugMesh(triangles, vertices, Color.red);
-
-            Vector3 height = new Vector3(0, length/2,0);
-
+            //Add final triangles to close the loop
+            //You might need to adjust these indices based on your specific case
+            triangles.Add(map[vertsPerRing - 1] + backOffset);
+            triangles.Add(map[0] + backOffset);
+            triangles.Add(backOffset - vertsPerRing + vertsPerRing/2);
             
-            // for (int i = 0; i < vertices.Count; i ++)
-            // {
-            //     Vector3 dir = vertices[i] - height;
-            //     dir.Normalize();
-            //     Debug.DrawLine(vertices[i],vertices[i] + dir * 0.07f ,Color.green,1000f);
+            
 
-                
+            triangles.Add(map[(vertsPerRing/2)-1] + backOffset);
+            triangles.Add(backOffset - vertsPerRing);
+            triangles.Add(backOffset - 1);
+
+           
+            
 
 
-            // }
 
             // Create final mesh
             wormMesh.vertices = vertices.ToArray();

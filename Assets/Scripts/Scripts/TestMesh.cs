@@ -36,6 +36,11 @@ public class TestMesh : MonoBehaviour
     [Range(0.01f, 2.0f)]
     [Tooltip("Bulge factor for the worm")]
     public float bulgeFactor = 0.5f;
+    [Range(0.2f, 3.0f)]
+    [Tooltip("Elongation factor for the worms end caps")]
+    public float elongation = 1.0f;
+
+    public Material meshMaterial;
     
 
     [Header("Rotation Settings")]
@@ -49,6 +54,9 @@ public class TestMesh : MonoBehaviour
         softbody = transform.GetComponent<Softbody>();
 
         InitializeMesh();
+
+        renderer.material = meshMaterial;
+        renderer.material.color = Color.cyan ;
 
         //Debug.Log($"filter mesh has  {filter.mesh.triangles.Length / 3} triangles");
 
@@ -85,7 +93,7 @@ public class TestMesh : MonoBehaviour
                 break;
 
             case MeshType.Worm:
-                filter.mesh = MeshGenerator.GenerateWorm(subdivisions: this.subdivisions,length:this.worm_length, bulgeFactor:this.bulgeFactor);
+                filter.mesh = MeshGenerator.GenerateWorm(subdivisions: this.subdivisions,length:this.worm_length, bulgeFactor:this.bulgeFactor, elongation:this.elongation);
                 this.transform.name = "Procedural Worm";
                 break;
         }

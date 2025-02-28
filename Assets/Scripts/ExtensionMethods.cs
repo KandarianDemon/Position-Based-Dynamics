@@ -7,6 +7,22 @@ using UnityEngine;
 public static class ExtensionMethods 
 {
     // Start is called before the first frame update
+
+     public static Vector3 DampenVelocity(this Vector3 v, Vector3 n, float d)
+    {
+        float normal_component = Vector3.Dot(v, n);
+
+        return v - (1 - d) * normal_component * n;
+    }
+
+
+    public static Vector3 Reflect(this Vector3 v, Vector3 n)
+    {
+        return v - 2 * Vector3.Dot(v, n) * n;
+    }
+
+
+   
     public static Matrix4x4 ToSkewSymmetricMatrix(this Vector3 v)
     {
         return new Matrix4x4(
